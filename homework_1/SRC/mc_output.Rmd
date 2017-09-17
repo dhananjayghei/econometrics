@@ -1,0 +1,122 @@
+---
+title       : Monte-Carlo Simulation
+author      : Dhananjay Ghei
+date        : 17th Sep 2017
+job         : UMN
+output      :
+            html_document:
+                toc: true
+                toc_float: true
+                mathjax: local
+                self_contained: false
+geometry    : margin=0.5in
+theme       : cerulean
+---
+
+
+<style type="text/css">
+
+body{ /* Normal  */
+   font-size: 14px;
+}
+
+h1 { /* Header 1 */
+ font-size: 22px;
+ color: DarkBlue;
+}
+h2 { /* Header 2 */
+   font-size: 19px;
+   color: DarkBlue;
+}
+td{font-size: 11pt;
+   padding:0px;
+   cellpadding="0";
+   cellspacing="0"
+}
+th {font-size: 11pt;
+   height: 20px;
+   font-weight: bold;
+   text-align: center;
+   background-color:
+   #ccccff;
+}
+table{border-spacing:
+	0px;
+	border-collapse:
+	collapse;
+}
+
+</style>
+								
+# Monte-Carlo Simulation
+
+This article demonstrates a method to do Monte-Carlo simulations in R
+for a two variable linear regression. The source code for this exercise
+is available [online](www.github.com/dhananjayghei/econometrics) in the
+Github repository.
+
+We will operate with the following model:
+
+   $y_i = \beta_0 + x_i \beta_1 + \epsilon_i$
+   
+where, $y_i$ and $x_i$ are random variables. We observe $N$ samples
+   of $i=1,2, \dots, n$ obersvations of $y$ and $x$.
+
+We will estimate
+   
+   $y_i = \hat \beta_0 + x_i \hat \beta_1 + e_i$
+
+```{r setOptions, message=FALSE, echo=FALSE, results='hide', warning=FALSE, include = FALSE}
+source("monte_carlo.R")
+```
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=4, fig.height=3, echo=FALSE, warning=FALSE, message=FALSE)
+```
+# Question 1
+First assume that the $\epsilon$ and the regressors are
+uncorrelated. Assume that both $X$ and $\epsilon$ are drawn from a
+normal distribution $\epsilon \sim N(0, \sigma_{\epsilon}^2), X \sim
+N(\mu_x, \sigma_x^2)$. Start with a sample size ($n$) of
+$n=100$ and define the number of samples to be simulated ($N$) to be
+$N=100$ as well. You also need to define the true values of $\beta_0$
+and $\beta_1$. Report the results that you fnid for the means and
+variance-covariance matrix of $\hat \beta_0$ and $\hat
+\beta_1$. Finally, plot the distribution of the estimated parameters
+and the theoretical normal distribution that they are supposed to
+follow. 
+
+## Generating multivariate random variables $\epsilon$ and $X$
+
+
+```{r geoDistribution,echo = FALSE, results = 'asis', strip.white = TRUE}
+ggplot(bhat, aes(x=b1hat))+geom_density(colour="midnightblue",
+                                        fill="midnightblue", alpha=0.3) +
+    theme_bw() + labs(x="", y="Density") +
+    theme(legend.background=element_rect())
+```
+
+The graph indicates that a significant percentage (22%) of the
+
+# Question 2
+Now vary the sample size ($n$) and redo 1) under the new
+values. Report and plot your results. Comment.
+
+
+# Question 3
+Now vary the number of samples ($N$) and redo 1) under the new value.s
+Report and plot your results. Comment.
+
+# Question 4
+Now vary the distribution of X and redo 1) under the new
+assumptions. Report and plot your results. Comment.
+
+# Question 5
+Now set the mean of the error $\epsilon$ to be different from zero and
+redo 1) under the new values. Comment.
+
+# Question 6
+Now draw the $\epsilon$ in such a way that it is in fact correlated
+with $X$ and redo 1) under the new assumptions. Report and plot your
+results. Comment.
+
