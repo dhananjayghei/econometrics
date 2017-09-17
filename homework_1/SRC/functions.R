@@ -36,3 +36,35 @@ design <- function(data, b0, b1){
     data <- data[, c("y", "const", "x", "eps")]
     return(data)
 }
+
+# Wrapper function to implement the exercise
+# muX - True mean of X
+# vX - True variance of X
+# muE - True mean of epsilon
+# vE - True variance of epsilon
+# r - Correlation between X and epsilon
+# n - Number of observations
+# N - Number of samples
+# b0 - True value of \beta_0
+# b1 - True value of \beta_1
+simulate.OLS <- function(muX, vX, muE, vE, r, n, N, b0, b1){
+    dat <- draw(muX=muX, vX=vX, muE=muE, vE=vE, r=r, n=n, N=N)
+    dat <- lapply(dat, function(x) design(data=x, b0=b0, b1=b1))
+    # Running OLS
+    OLS <- lapply(dat, function(z){
+        reg <- lm(y~x, data=z)
+    })
+    # Storing the estimated betas
+    bhat <- data.frame(do.call(rbind, lapply(OLS, coef)))
+    colnames(bhat) <- c("b0hat", "b1hat")
+    rownames(bhat) <- NULL
+    # Finding the x'x inverse
+    xxInv <- lapply(dat, function(z){
+            mat <- as.matrix(z[, c("const", "x")])
+            Inv <- ginv(crossprod(mat))
+            return(Inv)
+    })
+    # Finding the mean of inverse matrices
+    xxInv.avg <- Reduce('+', xxInv)/n
+    return(list(bEst=bhat, xxInv=xxInv.avg))
+}
