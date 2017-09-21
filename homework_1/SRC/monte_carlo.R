@@ -3,6 +3,7 @@ source("functions.R")
 # Loading the required libraries
 library(ggplot2)
 library(dplyr)
+library(latex2exp)
 
 # -------------- Question 1
 baseline <- simulate.OLS(muX=10, vX=4, muE=0, vE=1, r=0, n=100,
@@ -14,14 +15,15 @@ bhat.Baseline <- baseline[[1]]
 # Intercept (\hat \beta_0)
 ggplot(bhat.Baseline, aes(x=b0hat))+geom_density(colour="midnightblue",
                                         fill="midnightblue", alpha=0.3) +
-    theme_bw() + labs(x="", y="Density")+
+    theme_bw() + labs(x="", y="Density") +
     theme(legend.background=element_rect())
 
 # Slope (\hat \beta_1)
 ggplot(bhat.Baseline, aes(x=b1hat))+geom_density(colour="midnightblue",
                                         fill="midnightblue", alpha=0.3) +
     theme_bw() + labs(x="", y="Density") +
-    theme(legend.background=element_rect()) 
+    theme(legend.background=element_rect())
+
 # TODO: Add the theoretical distribution of beta hat for comparison
 
 

@@ -74,22 +74,10 @@ source("monte_carlo.R")
 ```{r global_options, include=FALSE}
 knitr::opts_chunk$set(fig.width=8, fig.height=6, echo=FALSE, warning=FALSE, message=FALSE)
 ```
-# Question 1
-First assume that the $\epsilon$ and the regressors are
-uncorrelated. Assume that both $X$ and $\epsilon$ are drawn from a
-normal distribution $\epsilon \sim N(0, \sigma_{\epsilon}^2), X \sim
-N(\mu_x, \sigma_x^2)$. Start with a sample size ($n$) of
-$n=100$ and define the number of samples to be simulated ($N$) to be
-$N=100$ as well. You also need to define the true values of $\beta_0$
-and $\beta_1$. Report the results that you fnid for the means and
-variance-covariance matrix of $\hat \beta_0$ and $\hat
-\beta_1$. Finally, plot the distribution of the estimated parameters
-and the theoretical normal distribution that they are supposed to
-follow. 
 
 ## Generating data
 
-### Random samples
+### Drawing random samples
 I write a function that draws $N$ random samples of size $n$ for the
 variables $\epsilon$ and $x_i$. This function takes as arguments the
 following:
@@ -117,7 +105,7 @@ draw <- function(muX, vX, muE, vE, r, n, N){
     return(dat)
 }
 ```
-### Generating $y$ from given values of $\beta_0$ and $\beta_1$
+### Generating $y$ (dependent variable)
 
 Next, I define a function that designs a matrix which generates $y$
 for given $X$ and $\epsilon$. It also adds a column of 1s to make
@@ -141,10 +129,14 @@ design <- function(data, b0, b1){
     return(data)
 }
 ```
+
+### Putting it all together
 The next step is to build a wrapper function that draws random
 samples, designs a matrix for OLS, runs OLS on each sample and returns
 output as the predicted values of coefficients ($\hat \beta_0$, $\hat
-\beta_1$) and the variance-covariance matrix of $\hat \beta$
+\beta_1$) and the variance-covariance matrix of $\hat \beta$. This
+function takes as arguments values for both the ```draw``` function and the
+```design``` function defined above.
 
 ```{r simulateFun, eval=FALSE, echo=TRUE, results='asis'}
 simulate.OLS <- function(muX, vX, muE, vE, r, n, N, b0, b1){
@@ -170,20 +162,34 @@ simulate.OLS <- function(muX, vX, muE, vE, r, n, N, b0, b1){
 }
 ```
 
+# Question 1
+First assume that the $\epsilon$ and the regressors are
+uncorrelated. Assume that both $X$ and $\epsilon$ are drawn from a
+normal distribution $\epsilon \sim N(0, \sigma_{\epsilon}^2), X \sim
+N(\mu_x, \sigma_x^2)$. Start with a sample size ($n$) of
+$n=100$ and define the number of samples to be simulated ($N$) to be
+$N=100$ as well. You also need to define the true values of $\beta_0$
+and $\beta_1$. Report the results that you fnid for the means and
+variance-covariance matrix of $\hat \beta_0$ and $\hat
+\beta_1$. Finally, plot the distribution of the estimated parameters
+and the theoretical normal distribution that they are supposed to
+follow. 
 
+I use the following values for estimation:
+$\beta_0=9$, $\beta_1=2$, $\mu_x=10$, $\mu_{\epsilon}=0$,
+$\sigma_x^2=4$, $\sigma_{\epsilon}^2=1$, $r_{x\epsilon}=0$
 
-```{r geoDistribution,echo = FALSE, results = 'asis', strip.white = TRUE}
-# Intercept (\hat \beta_0)
+The implementation is given using the ```simulate.OLS``` function as
+shown below:
+```{r simulateQ1, echo=TRUE, eval=FALSE}
+baseline <- simulate.OLS(muX=10, vX=4, muE=0, vE=1, r=0, n=100, N=100, b0=9, b1=2)
+```
+
+```{r beta0, echo = FALSE, results = 'asis', strip.white = TRUE}
 ggplot(bhat.Baseline, aes(x=b0hat))+geom_density(colour="midnightblue",
                                         fill="midnightblue", alpha=0.3) +
-    theme_bw() + labs(x="", y="Density")+
-    theme(legend.background=element_rect())
-
-# Slope (\hat \beta_1)
-ggplot(bhat.Baseline, aes(x=b1hat))+geom_density(colour="midnightblue",
-                                        fill="midnightblue", alpha=0.3) +
-    theme_bw() + labs(x="", y="Density") +
-    theme(legend.background=element_rect()) 
+    theme_bw() + labs(x="", y="Density") + 
+    theme(legend.background=element_rect())          
 ```
 
 The graph indicates that a significant percentage (22%) of the
