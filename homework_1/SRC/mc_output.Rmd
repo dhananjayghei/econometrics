@@ -9,6 +9,7 @@ output      :
                 toc_float: true
                 mathjax: local
                 self_contained: false
+                keep_md: true
 geometry    : margin=0.5in
 theme       : cerulean
 ---
@@ -52,7 +53,7 @@ table{border-spacing:
 
 This article demonstrates a method to do Monte-Carlo simulations in R
 for a two variable linear regression. The source code for this exercise
-is available [online](www.github.com/dhananjayghei/econometrics) in the
+is available [online](https://www.github.com/dhananjayghei/econometrics) in the
 Github repository.
 
 We will operate with the following model:
