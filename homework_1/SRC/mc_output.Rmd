@@ -87,7 +87,89 @@ variance-covariance matrix of $\hat \beta_0$ and $\hat
 and the theoretical normal distribution that they are supposed to
 follow. 
 
-## Generating multivariate random variables $\epsilon$ and $X$
+## Generating data
+
+### Random samples
+I write a function that draws $N$ random samples of size $n$ for the
+variables $\epsilon$ and $x_i$. This function takes as arguments the
+following:
+
+1. ```muX``` - True mean of X
+2. ```vX``` - True variance of X
+3. ```muE``` - True mean of $\epsilon$
+4. ```vE``` - True variance of $\epsilon$
+5. ```r``` - Correlation between $\epsilon$ and $X$
+6. ```n``` - Sample size
+7. ```N``` - Number of samples
+
+
+```{r drawFun, eval=FALSE, echo=TRUE, results='asis'}
+draw <- function(muX, vX, muE, vE, r, n, N){
+    set.seed(123)
+    dat <- lapply(1:N, function(y){
+        # Generating 2 random variables X and epsilon
+        k <- mvrnorm(n=n, mu=c(muX, muE),
+                     Sigma=matrix(c(vX, r, r, vE), nrow=2), empirical=FALSE)
+        k <- data.frame(k)
+        colnames(k) <- c("x", "eps")
+        return(k)
+    })
+    return(dat)
+}
+```
+### Generating $y$ from given values of $\beta_0$ and $\beta_1$
+
+Next, I define a function that designs a matrix which generates $y$
+for given $X$ and $\epsilon$. It also adds a column of 1s to make
+matrix multiplication easier. This function takes the following
+arguments:
+
+1. ```data``` - A sample of $X$ and $\epsilon$
+2. ```b0``` - True value of $\beta_0$
+3. ```b1``` - True value of $\beta_1$
+
+```{r designFun, eval=FALSE, echo=TRUE, results='asis'}
+design <- function(data, b0, b1){
+    # Generating a column for intercecpt
+    data[, "const"] <- rep(1, nrow(data))
+    # Creating the true beta matrix
+    betaT <- as.matrix(x=c(b0, b1), nrow=2, ncol=1)
+    # Generating y = b0 + b1*x + epsilon
+    data[, "y"] <- as.numeric(as.matrix(data[, c("const", "x")]) %*% betaT) + data[, "eps"]
+    # Re-arranging the columns for easy readability
+    data <- data[, c("y", "const", "x", "eps")]
+    return(data)
+}
+```
+The next step is to build a wrapper function that draws random
+samples, designs a matrix for OLS, runs OLS on each sample and returns
+output as the predicted values of coefficients ($\hat \beta_0$, $\hat
+\beta_1$) and the variance-covariance matrix of $\hat \beta$
+
+```{r simulateFun, eval=FALSE, echo=TRUE, results='asis'}
+simulate.OLS <- function(muX, vX, muE, vE, r, n, N, b0, b1){
+    dat <- draw(muX=muX, vX=vX, muE=muE, vE=vE, r=r, n=n, N=N)
+    dat <- lapply(dat, function(x) design(data=x, b0=b0, b1=b1))
+    # Running OLS
+    OLS <- lapply(dat, function(z){
+        reg <- lm(y~x, data=z)
+    })
+    # Storing the estimated betas
+    bhat <- data.frame(do.call(rbind, lapply(OLS, coef)))
+    colnames(bhat) <- c("b0hat", "b1hat")
+    rownames(bhat) <- NULL
+    # Finding x'x inverse
+    xxInv <- lapply(dat, function(z){
+            mat <- as.matrix(z[, c("const", "x")])
+            Inv <- ginv(crossprod(mat))
+            return(Inv)
+    })
+    # Finding the mean of inverse matrices
+    xxInv.avg <- Reduce('+', xxInv)/n
+    return(list(bEst=bhat, xxInv=xxInv.avg))
+}
+```
+
 
 
 ```{r geoDistribution,echo = FALSE, results = 'asis', strip.white = TRUE}
