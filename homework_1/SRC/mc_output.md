@@ -44,6 +44,7 @@ for a two variable linear regression. The source code for this exercise
 is available [online](https://www.github.com/dhananjayghei/econometrics) in the
 Github repository.
 
+## Setup
 We will operate with the following model:
 
    $y_i = \beta_0 + x_i \beta_1 + \epsilon_i$
@@ -58,22 +59,9 @@ We will estimate
 
 
 
-# Question 1
-First assume that the $\epsilon$ and the regressors are
-uncorrelated. Assume that both $X$ and $\epsilon$ are drawn from a
-normal distribution $\epsilon \sim N(0, \sigma_{\epsilon}^2), X \sim
-N(\mu_x, \sigma_x^2)$. Start with a sample size ($n$) of
-$n=100$ and define the number of samples to be simulated ($N$) to be
-$N=100$ as well. You also need to define the true values of $\beta_0$
-and $\beta_1$. Report the results that you fnid for the means and
-variance-covariance matrix of $\hat \beta_0$ and $\hat
-\beta_1$. Finally, plot the distribution of the estimated parameters
-and the theoretical normal distribution that they are supposed to
-follow. 
 
-## Generating data
 
-### Random samples
+## Drawing random samples
 I write a function that draws $N$ random samples of size $n$ for the
 variables $\epsilon$ and $x_i$. This function takes as arguments the
 following:
@@ -102,7 +90,7 @@ draw <- function(muX, vX, muE, vE, r, n, N){
     return(dat)
 }
 ```
-### Generating $y$ from given values of $\beta_0$ and $\beta_1$
+## Generating $y$ (dependent variable)
 
 Next, I define a function that designs a matrix which generates $y$
 for given $X$ and $\epsilon$. It also adds a column of 1s to make
@@ -127,10 +115,14 @@ design <- function(data, b0, b1){
     return(data)
 }
 ```
+
+## Putting it all together
 The next step is to build a wrapper function that draws random
 samples, designs a matrix for OLS, runs OLS on each sample and returns
 output as the predicted values of coefficients ($\hat \beta_0$, $\hat
-\beta_1$) and the variance-covariance matrix of $\hat \beta$
+\beta_1$) and the variance-covariance matrix of $\hat \beta$. This
+function takes as arguments values for both the ```draw``` function and the
+```design``` function defined above.
 
 
 ```r
@@ -145,7 +137,7 @@ simulate.OLS <- function(muX, vX, muE, vE, r, n, N, b0, b1){
     bhat <- data.frame(do.call(rbind, lapply(OLS, coef)))
     colnames(bhat) <- c("b0hat", "b1hat")
     rownames(bhat) <- NULL
-    # Finding x'x inverse
+    # Finding the x'x inverse
     xxInv <- lapply(dat, function(z){
             mat <- as.matrix(z[, c("const", "x")])
             Inv <- ginv(crossprod(mat))
@@ -157,33 +149,167 @@ simulate.OLS <- function(muX, vX, muE, vE, r, n, N, b0, b1){
 }
 ```
 
+# Question 1
+*First assume that the $\epsilon$ and the regressors are
+uncorrelated. Assume that both $X$ and $\epsilon$ are drawn from a
+normal distribution $\epsilon \sim N(0, \sigma_{\epsilon}^2), X \sim
+N(\mu_x, \sigma_x^2)$. Start with a sample size ($n$) of
+$n=100$ and define the number of samples to be simulated ($N$) to be
+$N=100$ as well. You also need to define the true values of $\beta_0$
+and $\beta_1$. Report the results that you fnid for the means and
+variance-covariance matrix of $\hat \beta_0$ and $\hat
+\beta_1$. Finally, plot the distribution of the estimated parameters
+and the theoretical normal distribution that they are supposed to
+follow.*
+
+I use the following values for estimation:
+$\beta_0=9$, $\beta_1=2$, $\mu_x=10$, $\mu_{\epsilon}=0$,
+$\sigma_x^2=4$, $\sigma_{\epsilon}^2=1$, $r_{x\epsilon}=0$
+
+The implementation is given using the ```simulate.OLS``` function as
+shown below:
+
+```r
+baseline <- simulate.OLS(muX=10, vX=4, muE=0, vE=1, r=0, n=100, N=100, b0=9, b1=2)
+```
+
+![](mc_output_files/figure-html/beta0-1.png)<!-- -->
+
+![](mc_output_files/figure-html/beta1-1.png)<!-- -->
 
 
-![](mc_output_files/figure-html/geoDistribution-1.png)<!-- -->![](mc_output_files/figure-html/geoDistribution-2.png)<!-- -->
-
-The graph indicates that a significant percentage (22%) of the
 
 # Question 2
-Now vary the sample size ($n$) and redo 1) under the new
-values. Report and plot your results. Comment.
-![](mc_output_files/figure-html/q2-1.png)<!-- -->
+*Now vary the sample size ($n$) and redo 1) under the new
+values. Report and plot your results. Comment.*
+
+| Sample size ($n$) | $E[\hat \beta_0|X]$ | $E[\hat \beta_1|X]$ |
+|-------------------|--------------------:|--------------------:|
+| n=10              |               8.826 |               2.019 |
+| n=100             |               9.043 |               1.997 |
+| n=1000            |               8.988 |               2.001 |
+
+
+
+![](mc_output_files/figure-html/q2b0hat-1.png)<!-- -->
+
+
+![](mc_output_files/figure-html/q2b1hat-1.png)<!-- -->
 
 # Question 3
-Now vary the number of samples ($N$) and redo 1) under the new value.s
-Report and plot your results. Comment.
+*Now vary the number of samples ($N$) and redo 1) under the new value.s
+Report and plot your results. Comment.*
 
-![](mc_output_files/figure-html/q3-1.png)<!-- -->
+| No. of samples ($N$) | $E[\hat \beta_0|X]$ | $E[\hat \beta_1|X]$ |
+|----------------------|--------------------:|--------------------:|
+| N=10                 |               9.025 |               1.998 |
+| N=100                |               9.043 |               1.997 |
+| N=1000               |               9.001 |               2.000 |
+
+
+
+![](mc_output_files/figure-html/q3b0hat-1.png)<!-- -->
+
+![](mc_output_files/figure-html/q3b1hat-1.png)<!-- -->
 
 # Question 4
-Now vary the distribution of X and redo 1) under the new
-assumptions. Report and plot your results. Comment.
+*Now vary the distribution of X and redo 1) under the new
+assumptions. Report and plot your results. Comment.*
+
+We vary the distribution of $X$ by changing the variance of $X$. Note
+that, we derived in class that the variance of slope coefficients is
+inversly proportional to $(X'X)$. In particular,
+
+$var(\hat \beta | X) = \sigma_{\epsilon}^2 (X'X)^{-1}$
+
+Thus, if we increase (decrease) the variation in $X$, one would expect that the
+variation in $\hat \beta$ will decrease (increase).
+
+| Dist. of X      | $E[\hat \beta_0|X]$ | $E[\hat \beta_1|X]$ |
+|-----------------|--------------------:|--------------------:|
+| $\sigma_X^2=2$  |               9.054 |               1.996 |
+| $\sigma_X^2=4$  |               9.043 |               1.997 |
+| $\sigma_X^2=16$ |               9.029 |               1.999 |
+
+
+![](mc_output_files/figure-html/q4b0hat-1.png)<!-- -->
+The figure shows the variation in $\hat \beta_0$ for three cases a)
+$\sigma_X^2=2$, b) $\sigma_X^2=4$ (baseline model), and c)
+$\sigma_X^2=16$. In case *a)*, $X$ has lower variance, which implies
+that the variation in $\hat \beta_0$ will be higher and thus, the
+distribution will be wider. Intuitively, lower variance in X implies
+that we have concentration of data in a smaller range. It becomes difficult
+to find the true $\hat \beta$ since we can not know how the
+relationship holds outside the range. Similarly, in case *c)*, $X$ has
+higher variance and hence, the distribution of $\hat \beta_0$ will
+shrink compared to the baseline model in *b)*.
+
+        
+![](mc_output_files/figure-html/q4b1hat-1.png)<!-- -->
+
 
 # Question 5
-Now set the mean of the error $\epsilon$ to be different from zero and
-redo 1) under the new values. Comment.
+*Now set the mean of the error $\epsilon$ to be different from zero and
+redo 1) under the new values. Comment.*
+
+In particular, one can, mathematically, show that a change in the mean of $\epsilon$
+affects *only* the intercept. Consider $E[\mu_{\epsilon}] = a$ (some constant,
+say). One can re-write the original model as:
+
+$y_i = \tilde{\beta_0} + x_i \beta_1 + u_i$
+
+where, $\tilde{\beta_0}=\beta_0+a$, and, $u_i = \epsilon_i-a$.
+Thus, we get, $E[\mu_{u_i}]=0$
+Therefore, one would expect the intercept to shift by $a$ and the
+slope coefficient to remain unchanged.
+
+| Error term         | $E[\hat \beta_0|X]$ | $E[\hat \beta_1|X]$ |
+|--------------------|--------------------:|--------------------:|
+| $\mu_{\epsilon}=2$ |              11.043 |               1.997 |
+| $\mu_{\epsilon}=0$ |               9.043 |               1.997 |
+
+
+![](mc_output_files/figure-html/q5b0hat-1.png)<!-- -->
+
+The figure above compares the estimate for $\hat \beta_0$ for two
+cases, namely: a) $\mu_{\epsilon}=2$ and b) $\mu_{\epsilon}=0$. As
+explained above, we see that case *a)* with non-zero (positive) mean for the
+error shifts the distribution of $\hat \beta_0$ to the right when
+compared to case *b)* (Baseline model)
+
+
+![](mc_output_files/figure-html/q5b1hat-1.png)<!-- -->
+
+The figure compares the distribution of $\hat \beta_1$ for the cases
+mentioned above. As expected, the slope coefficients do not change,
+and the two distributions superimpose on each other.
 
 # Question 6
-Now draw the $\epsilon$ in such a way that it is in fact correlated
+*Now draw the $\epsilon$ in such a way that it is in fact correlated
 with $X$ and redo 1) under the new assumptions. Report and plot your
-results. Comment.
+results. Comment.*
 
+| Correlation coeff      | $E[\hat \beta_0|X]$ | $E[\hat \beta_1|X]$ |
+|------------------------|--------------------:|--------------------:|
+| $r_{X, \epsilon}=0.8$  |               7.040 |               2.197 |
+| $r_{X, \epsilon}=0$    |               9.043 |               1.997 |
+| $r_{X, \epsilon}=-0.8$ |              11.036 |               1.798 |
+
+![](mc_output_files/figure-html/q6b0hat-1.png)<!-- -->
+
+The figure above compares the distribution of $\hat \beta_0$ for three
+cases: namely a) $r_{X,\epsilon} = 0.8$, b) $r_{X, \epsilon} = 0$, and c)
+$r_{X,\epsilon}=-0.8$. When $X$ and $\epsilon$ are positively (or, negatively)
+correlated, the strict exogeneity assumption (A1.2) is violated. This
+leads to OLS estimates being biased. In particular, positive
+(negative) correlation leads to a downward (upward) bias in our
+estimates.
+
+![](mc_output_files/figure-html/q6b1hat-1.png)<!-- -->
+
+The figure shown above compares the distribution of $\hat \beta_1$ for
+the three cases as mentioned above. Once again, correlation between
+the regressor and error terms leads to a violation of strict
+exogeneity assumption resulting in biased estimates of $\hat
+\beta_1$. However, note that in this case, positive (negative)
+correlation leads to an upward (downward) bias for $\hat \beta_1$.

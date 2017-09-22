@@ -11,23 +11,51 @@ baseline <- simulate.OLS(muX=10, vX=4, muE=0, vE=1, r=0, n=100,
 bhat.Baseline <- baseline[[1]]
 
 # Theoretical distribution of beta
-x <- seq(-2, 2, length=100)
-plot(dnorm(x=x, mean=9, sd=sqrt(baseline[[2]][1, 1])))
+x <- seq(7.5, 11, length=100)
+b0True <- cbind(x, dnorm(x=x, mean=9, sd=sqrt(baseline[[2]][1, 1])))
 
 # Density plots
 # Intercept (\hat \beta_0)
-ggplot(bhat.Baseline, aes(x=b0hat)) +
-    geom_density(colour="midnightblue", fill="midnightblue", alpha=0.3) +
-    theme_bw() + labs(x="", y="Density") +
-    theme(legend.background=element_rect())
+plot(density(bhat.Baseline$b0hat),
+     col="midnightblue", xlab="", ylab="Density", lwd=2, 
+     main=expression(paste("Distribution of ", beta[0], sep="  ")))
+lines(x=b0True[, 1], y=b0True[, 2], lwd=2, col="firebrick")
+legend("topright", col=c("midnightblue", "firebrick"),
+       lwd=c(2,2), bty="n", legend=c("Monte-carlo distribution",
+                                     "True distribution"))
+
+## ggplot(bhat.Baseline, aes(x=b0hat)) +
+##     geom_density(colour="midnightblue", fill="midnightblue", alpha=0.3) +
+##     theme_bw() + labs(x="", y="Density") +
+##     theme(legend.background=element_rect())
+
+## ggplot() + 
+##     geom_histogram(breaks=seq(7,11,length=100), 
+##                     colour="black", 
+##                     fill="midnightblue") +
+##     stat_function(fun=dnorm, args=list(mean=9, sd=sqrt(baseline[[2]][1, 1])))
+
 
 # Slope (\hat \beta_1)
-ggplot(bhat.Baseline, aes(x=b1hat)) +
-    geom_density(colour="midnightblue", fill="midnightblue", alpha=0.3) +
-    theme_bw() + labs(x="", y="Density") +
-    theme(legend.background=element_rect())
+z <- seq(1.85, 2.15, length=100)
+b1True <- cbind(z, dnorm(x=z, mean=2, sd=sqrt(baseline[[2]][2, 2])))
 
-plot(density(rnorm(1000, 9, sd=sqrt(baseline[[2]][1, 1]))))
+# Density plots
+# Intercept (\hat \beta_0)
+plot(density(bhat.Baseline$b1hat),
+     col="midnightblue", xlab="", ylab="Density", lwd=2, 
+     main=expression(paste("Distribution of ", beta[1], sep="  ")))
+lines(x=b1True[, 1], y=b1True[, 2], lwd=2, col="firebrick")
+legend("topright", col=c("midnightblue", "firebrick"),
+       lwd=c(2,2), bty="n", legend=c("Monte-carlo distribution",
+                                     "True distribution"))
+
+## ggplot(bhat.Baseline, aes(x=b1hat)) +
+##     geom_density(colour="midnightblue", fill="midnightblue", alpha=0.3) +
+##     theme_bw() + labs(x="", y="Density") +
+##     theme(legend.background=element_rect())
+
+## plot(density(rnorm(1000, 9, sd=sqrt(baseline[[2]][1, 1]))))
 
 # TODO: Add the theoretical distribution of beta hat for comparison
 
@@ -44,14 +72,25 @@ bhat.n$type <- c(rep("Small Sample", 100),
                  rep("Baseline Sample", 100),
                  rep("Large Sample", 100))
 
+# Storing the results
+library(dplyr)
+
+bMean.n <- bhat.n %>%
+    group_by(type) %>%
+    summarise(b0=round(mean(b0hat), 3),
+              b1=round(mean(b1hat), 3)) %>%
+    ungroup() %>% data.frame()
+
+
 # Plotting
 # Slope
 ggplot(bhat.n, aes(x=b0hat, fill=type)) +
     geom_density(alpha=0.5) +
     theme_bw() +
-    labs(x="", y="Density") +
+    labs(x="", y="Density", title=expression(paste("Distribution of ", beta[0], sep="   "))) +
     theme(legend.background=element_rect(),
-          legend.position=c(.8,.9))  +
+          legend.position=c(.8,.85),
+          plot.title=element_text(hjust=.5))  +
     scale_fill_manual(values=c("firebrick", "midnightblue", "forestgreen"),
                       name = "",
                       breaks=c("Small Sample",
@@ -63,9 +102,10 @@ ggplot(bhat.n, aes(x=b0hat, fill=type)) +
 ggplot(bhat.n, aes(x=b1hat, fill=type)) +
     geom_density(alpha=0.5) +
     theme_bw() +
-    labs(x="", y="Density") +
+    labs(x="", y="Density", title=expression(paste("Distribution of ", beta[1], sep="  "))) +
     theme(legend.background=element_rect(),
-          legend.position=c(.8,.9))  +
+          legend.position=c(.8,.85),
+          plot.title=element_text(hjust=.5))  +
     scale_fill_manual(values=c("firebrick", "midnightblue", "forestgreen"),
                       name = "",
                       breaks=c("Small Sample",
@@ -87,14 +127,21 @@ bhat.N <- data.frame(do.call(rbind, list(smallN[[1]],
                                          baseline[[1]], largeN[[1]])))
 bhat.N$type <- c(rep("Small Sample", 10), rep("Baseline", 100), rep("Large Sample", 10000))
 
+bMean.N <- bhat.N %>%
+    group_by(type) %>%
+    summarise(b0=round(mean(b0hat), 3),
+              b1=round(mean(b1hat), 3)) %>%
+    ungroup() %>% data.frame()
+
 # Plotting
 ## Slope
 ggplot(bhat.N, aes(x=b0hat, fill=type)) +
     geom_density(alpha=0.5) +
     theme_bw() +
-    labs(x="", y="Density") +
+    labs(x="", y="Density", title=expression(paste("Distribution of ", beta[0]))) +
     theme(legend.background=element_rect(),
-          legend.position=c(.77,.85))  +
+          legend.position=c(.77,.85),
+          plot.title=element_text(hjust=.5))  +
     scale_fill_manual(values=c("firebrick", "midnightblue", "forestgreen"),
                       name = "",
                       breaks=c("Small Sample", "Baseline", "Large Sample"),
@@ -105,9 +152,10 @@ ggplot(bhat.N, aes(x=b0hat, fill=type)) +
 ggplot(bhat.N, aes(x=b1hat, fill=type)) +
     geom_density(alpha=0.5) +
     theme_bw() +
-    labs(x="", y="Density") +
+    labs(x="", y="Density", title=expression(paste("Distribution of ", beta[1], sep="   "))) +
     theme(legend.background=element_rect(),
-          legend.position=c(.77,.85))  +
+          legend.position=c(.77,.85),
+          plot.title=element_text(hjust=.5))  +
     scale_fill_manual(values=c("firebrick", "midnightblue", "forestgreen"),
                       name = "",
                       breaks=c("Small Sample", "Baseline", "Large Sample"),
@@ -128,14 +176,21 @@ bhat.Xvar <- data.frame(do.call(rbind, list(lowXvar[[1]],
 bhat.Xvar$type <- c(rep("Low", 100), rep("Baseline", 100),
                rep("High", 100))
 
+bMean.Xvar <- bhat.Xvar %>%
+    group_by(type) %>%
+    summarise(b0=round(mean(b0hat), 3),
+              b1=round(mean(b1hat), 3)) %>%
+    ungroup() %>% data.frame()
+
 # Plotting
 ## Slope
 ggplot(bhat.Xvar, aes(x=b0hat, fill=type)) +
     geom_density(alpha=0.3) +
     theme_bw() +
-    labs(x="", y="Density") +
+    labs(x="", y="Density", title=expression(paste("Distribution of ", beta[0]))) +
     theme(legend.background=element_rect(),
-          legend.position=c(.9,.9)) +
+          legend.position=c(.9,.9),
+          plot.title=element_text(hjust=.5)) +
     scale_fill_manual(values=c("firebrick", "midnightblue", "forestgreen"),
                       name="",
                       breaks=c("Low", "Baseline", "High"),
@@ -147,9 +202,10 @@ ggplot(bhat.Xvar, aes(x=b0hat, fill=type)) +
 ggplot(bhat.Xvar, aes(x=b1hat, fill=type)) +
     geom_density(alpha=0.3) +
     theme_bw() +
-    labs(x="", y="Density") +
+    labs(x="", y="Density", title=expression(paste("Distribution of ", beta[1]))) +
     theme(legend.background=element_rect(),
-          legend.position=c(.9,.9)) +
+          legend.position=c(.9,.9),
+          plot.title=element_text(hjust=.5)) +
     scale_fill_manual(values=c("firebrick", "midnightblue", "forestgreen"),
                       name="",
                       breaks=c("Low", "Baseline", "High"),
@@ -168,13 +224,20 @@ bhat.eps <- epsDist[[1]]
 bhat.eps <- rbind(bhat.eps, bhat.Baseline)
 bhat.eps$type <- c(rep("Mean", 100), rep("No mean", 100))
 
+bMean.eps <- bhat.eps %>%
+    group_by(type) %>%
+    summarise(b0=round(mean(b0hat), 3),
+              b1=round(mean(b1hat), 3)) %>%
+    ungroup() %>% data.frame()
+
 # Change in the intercept value. The mean will shift from 9 to 11
 ggplot(bhat.eps, aes(x=b0hat, fill=type)) +
     geom_density(alpha=0.3) +
     theme_bw() +
-    labs(x="", y="Density") +
+    labs(x="", y="Density", title=expression(paste("Distribution of ", beta[0]))) +
     theme(legend.background=element_rect(),
-          legend.position=c(.9,.9)) +
+          legend.position=c(.9,.9),
+          plot.title=element_text(hjust=.5)) +
     scale_fill_manual(values=c("firebrick", "midnightblue"),
                       name="",
                       breaks=c("Mean", "No mean"),
@@ -185,9 +248,10 @@ ggplot(bhat.eps, aes(x=b0hat, fill=type)) +
 ggplot(bhat.eps, aes(x=b1hat, fill=type)) +
     geom_density(alpha=0.3) +
     theme_bw() +
-    labs(x="", y="Density") +
+    labs(x="", y="Density", title=expression(paste("Distribution of ", beta[1]))) +
     theme(legend.background=element_rect(),
-          legend.position=c(.9,.9)) +
+          legend.position=c(.9,.9),
+          plot.title=element_text(hjust=.5)) +
     scale_fill_manual(values=c("firebrick", "midnightblue"),
                       name="",
                       breaks=c("Mean", "No mean"),
@@ -213,27 +277,36 @@ bhat.cor <- rbind(bhat.pcor, bhat.Baseline, bhat.ncor)
 bhat.cor$type <- c(rep("Correlated", 100),
                    rep("Baseline", 100), rep("Uncorrelated", 100))
 
+bMean.cor <- bhat.cor %>%
+    group_by(type) %>%
+    summarise(b0=round(mean(b0hat), 3),
+              b1=round(mean(b1hat), 3)) %>%
+    ungroup() %>% data.frame()
+
 # Plotting
 ## Slope
 ggplot(bhat.cor, aes(x=b0hat, fill=type)) +
     geom_density(alpha=0.3) +
     theme_bw() +
     theme(legend.background=element_rect(),
-          legend.position=c(.9,.9)) +
-    labs(x="", y="Density") +
+          legend.position=c(.9,.85),
+          plot.title=element_text(hjust=.5)) +
+    labs(x="", y="Density", title=expression(paste("Distribution of ", beta[0]))) +
     scale_fill_manual(values=c("firebrick", "midnightblue", "forestgreen"),
                       name="",
                       breaks=c("Correlated", "Baseline", "Uncorrelated"),
                       labels=c(expression(paste(r[x][epsilon],"=",0.8)),
                                expression(paste(r[x][epsilon],"=",0)),
                                expression(paste(r[x][epsilon],"=",-0.8))))
+
 ## Intercept
 ggplot(bhat.cor, aes(x=b1hat, fill=type)) +
     geom_density(alpha=0.3) +
     theme_bw() +
     theme(legend.background=element_rect(),
-          legend.position=c(.9,.9)) +
-    labs(x="", y="Density") +
+          legend.position=c(.9,.85),
+          plot.title=element_text(hjust=.5)) +
+    labs(x="", y="Density", title=expression(paste("Distribution of ", beta[1]))) +
     scale_fill_manual(values=c("firebrick", "midnightblue", "forestgreen"),
                       name="",
                       breaks=c("Correlated", "Baseline", "Uncorrelated"),

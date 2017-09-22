@@ -187,42 +187,54 @@ baseline <- simulate.OLS(muX=10, vX=4, muE=0, vE=1, r=0, n=100, N=100, b0=9, b1=
 ```
 
 ```{r beta0, echo = FALSE, results = 'asis', strip.white = TRUE}
-ggplot(bhat.Baseline, aes(x=b0hat))+geom_density(colour="midnightblue",
-                                        fill="midnightblue", alpha=0.3) +
-    theme_bw() + labs(x="", y="Density") + 
-    theme(legend.background=element_rect())          
+plot(density(bhat.Baseline$b0hat),
+     col="midnightblue", xlab="", ylab="Density", lwd=2, 
+     main=expression(paste("Distribution of ", beta[0], sep="  ")))
+lines(x=b0True[, 1], y=b0True[, 2], lwd=2, col="firebrick")
+legend("topright", col=c("midnightblue", "firebrick"),
+       lwd=c(2,2), bty="n", legend=c("Monte-carlo distribution",
+                                     "True distribution"))
 ```
 
 ```{r beta1, echo=FALSE, results='asis', strip.white=TRUE}
-ggplot(bhat.Baseline, aes(x=b1hat))+geom_density(colour="midnightblue",
-                                        fill="midnightblue", alpha=0.3) +
-    theme_bw() + labs(x="", y="Density") +
-    theme(legend.background=element_rect())
+plot(density(bhat.Baseline$b1hat),
+     col="midnightblue", xlab="", ylab="Density", lwd=2, 
+     main=expression(paste("Distribution of ", beta[1], sep="  ")))
+lines(x=b1True[, 1], y=b1True[, 2], lwd=2, col="firebrick")
+legend("topright", col=c("midnightblue", "firebrick"),
+       lwd=c(2,2), bty="n", legend=c("Monte-carlo distribution",
+                                     "True distribution"))
 ```
 
-```{r vcov, echo=FALSE, results='asis'}
-kable(round(baseline[[2]], 2), format="markdown", align="c")
-```
 
 
 # Question 2
 *Now vary the sample size ($n$) and redo 1) under the new
 values. Report and plot your results. Comment.*
 
+| Sample size ($n$) | $E[\hat \beta_0|X]$ | $E[\hat \beta_1|X]$ |
+|-------------------|--------------------:|--------------------:|
+| n=10              |               8.826 |               2.019 |
+| n=100             |               9.043 |               1.997 |
+| n=1000            |               8.988 |               2.001 |
+
+
 
 ```{r q2b0hat, echo = FALSE, results = 'asis', strip.white=TRUE}
 ggplot(bhat.n, aes(x=b0hat, fill=type)) +
     geom_density(alpha=0.5) +
     theme_bw() +
-    labs(x="", y="Density") +
+    labs(x="", y="Density", title=expression(paste("Distribution of ", beta[0], sep="   "))) +
     theme(legend.background=element_rect(),
-          legend.position=c(.8,.9))  +
+          legend.position=c(.8,.85),
+          plot.title=element_text(hjust=.5))  +
     scale_fill_manual(values=c("firebrick", "midnightblue", "forestgreen"),
                       name = "",
                       breaks=c("Small Sample",
                                "Baseline Sample", "Large Sample"),
                       labels=c("Sample size - 10", "Sample size - 100",
                                "Sample size - 1000"))
+
 ```
 
 
@@ -230,44 +242,55 @@ ggplot(bhat.n, aes(x=b0hat, fill=type)) +
 ggplot(bhat.n, aes(x=b1hat, fill=type)) +
     geom_density(alpha=0.5) +
     theme_bw() +
-    labs(x="", y="Density") +
+    labs(x="", y="Density", title=expression(paste("Distribution of ", beta[1], sep="  "))) +
     theme(legend.background=element_rect(),
-          legend.position=c(.8,.9))  +
+          legend.position=c(.8,.85),
+          plot.title=element_text(hjust=.5))  +
     scale_fill_manual(values=c("firebrick", "midnightblue", "forestgreen"),
                       name = "",
                       breaks=c("Small Sample",
                                "Baseline Sample", "Large Sample"),
                       labels=c("Sample size - 10", "Sample size - 100",
                                "Sample size - 1000"))
-
 ```
 
 # Question 3
 *Now vary the number of samples ($N$) and redo 1) under the new value.s
 Report and plot your results. Comment.*
 
+| No. of samples ($N$) | $E[\hat \beta_0|X]$ | $E[\hat \beta_1|X]$ |
+|----------------------|--------------------:|--------------------:|
+| N=10                 |               9.025 |               1.998 |
+| N=100                |               9.043 |               1.997 |
+| N=1000               |               9.001 |               2.000 |
+
+
+
 ```{r q3b0hat, echo = FALSE, results = 'asis', strip.white = TRUE}
 ggplot(bhat.N, aes(x=b0hat, fill=type)) +
     geom_density(alpha=0.5) +
     theme_bw() +
-    labs(x="", y="Density") +
+    labs(x="", y="Density", title=expression(paste("Distribution of ", beta[0]))) +
     theme(legend.background=element_rect(),
-          legend.position=c(.77,.85))  +
-    scale_fill_manual(values=c("midnightblue", "firebrick", "forestgreen"),
+          legend.position=c(.77,.85),
+          plot.title=element_text(hjust=.5))  +
+    scale_fill_manual(values=c("firebrick", "midnightblue", "forestgreen"),
                       name = "",
                       breaks=c("Small Sample", "Baseline", "Large Sample"),
                       labels=c("No. of samples - 10",
                                "No. of samples - 100 (Baseline Model)",
-                               "No. of samples - 1000"))
+                               "No. of samples - 10000"))
+
 ```
 
 ```{r q3b1hat, echo=FALSE, results='asis', strip.white=TRUE}
 ggplot(bhat.N, aes(x=b1hat, fill=type)) +
     geom_density(alpha=0.5) +
     theme_bw() +
-    labs(x="", y="Density") +
+    labs(x="", y="Density", title=expression(paste("Distribution of ", beta[1], sep="   "))) +
     theme(legend.background=element_rect(),
-          legend.position=c(.77,.85))  +
+          legend.position=c(.77,.85),
+          plot.title=element_text(hjust=.5))  +
     scale_fill_manual(values=c("firebrick", "midnightblue", "forestgreen"),
                       name = "",
                       breaks=c("Small Sample", "Baseline", "Large Sample"),
@@ -289,13 +312,21 @@ $var(\hat \beta | X) = \sigma_{\epsilon}^2 (X'X)^{-1}$
 Thus, if we increase (decrease) the variation in $X$, one would expect that the
 variation in $\hat \beta$ will decrease (increase).
 
+| Dist. of X      | $E[\hat \beta_0|X]$ | $E[\hat \beta_1|X]$ |
+|-----------------|--------------------:|--------------------:|
+| $\sigma_X^2=2$  |               9.054 |               1.996 |
+| $\sigma_X^2=4$  |               9.043 |               1.997 |
+| $\sigma_X^2=16$ |               9.029 |               1.999 |
+
+
 ```{r q4b0hat, echo=FALSE, results='asis', strip.white=TRUE}
 ggplot(bhat.Xvar, aes(x=b0hat, fill=type)) +
     geom_density(alpha=0.3) +
     theme_bw() +
-    labs(x="", y="Density") +
+    labs(x="", y="Density", title=expression(paste("Distribution of ", beta[0]))) +
     theme(legend.background=element_rect(),
-          legend.position=c(.9,.9)) +
+          legend.position=c(.9,.85),
+          plot.title=element_text(hjust=.5)) +
     scale_fill_manual(values=c("firebrick", "midnightblue", "forestgreen"),
                       name="",
                       breaks=c("Low", "Baseline", "High"),
@@ -320,16 +351,16 @@ shrink compared to the baseline model in *b)*.
 ggplot(bhat.Xvar, aes(x=b1hat, fill=type)) +
     geom_density(alpha=0.3) +
     theme_bw() +
-    labs(x="", y="Density") +
+    labs(x="", y="Density", title=expression(paste("Distribution of ", beta[1]))) +
     theme(legend.background=element_rect(),
-          legend.position=c(.9,.9)) +
+          legend.position=c(.9,.85),
+          plot.title=element_text(hjust=.5)) +
     scale_fill_manual(values=c("firebrick", "midnightblue", "forestgreen"),
                       name="",
                       breaks=c("Low", "Baseline", "High"),
                       labels=c(expression(paste(sigma[x]^2,"=", 2)),
                                expression(paste(sigma[x]^2,"=",4)),
                                expression(paste(sigma[x]^2,"=", 16))))
-
 ```
 
 
@@ -348,19 +379,25 @@ Thus, we get, $E[\mu_{u_i}]=0$
 Therefore, one would expect the intercept to shift by $a$ and the
 slope coefficient to remain unchanged.
 
+| Error term         | $E[\hat \beta_0|X]$ | $E[\hat \beta_1|X]$ |
+|--------------------|--------------------:|--------------------:|
+| $\mu_{\epsilon}=2$ |              11.043 |               1.997 |
+| $\mu_{\epsilon}=0$ |               9.043 |               1.997 |
+
+
 ```{r q5b0hat, echo=FALSE, results='asis', strip.white=TRUE}
 ggplot(bhat.eps, aes(x=b0hat, fill=type)) +
     geom_density(alpha=0.3) +
     theme_bw() +
-    labs(x="", y="Density") +
+    labs(x="", y="Density", title=expression(paste("Distribution of ", beta[0]))) +
     theme(legend.background=element_rect(),
-          legend.position=c(.9,.9)) +
-    scale_fill_manual(values=c("midnightblue", "darkorange4"),
+          legend.position=c(.9,.9),
+          plot.title=element_text(hjust=.5)) +
+    scale_fill_manual(values=c("firebrick", "midnightblue"),
                       name="",
                       breaks=c("Mean", "No mean"),
                       labels=c(expression(paste(mu[epsilon],"=", 2)),
                                expression(paste(mu[epsilon],"=",0))))
-
 ```
 
 The figure above compares the estimate for $\hat \beta_0$ for two
@@ -374,14 +411,16 @@ compared to case *b)* (Baseline model)
 ggplot(bhat.eps, aes(x=b1hat, fill=type)) +
     geom_density(alpha=0.3) +
     theme_bw() +
-    labs(x="", y="Density") +
+    labs(x="", y="Density", title=expression(paste("Distribution of ", beta[1]))) +
     theme(legend.background=element_rect(),
-          legend.position=c(.9,.9)) +
+          legend.position=c(.9,.9),
+          plot.title=element_text(hjust=.5)) +
     scale_fill_manual(values=c("firebrick", "midnightblue"),
                       name="",
                       breaks=c("Mean", "No mean"),
                       labels=c(expression(paste(mu[epsilon],"=", 2)),
                                expression(paste(mu[epsilon],"=",0))))
+
 ```
 
 The figure compares the distribution of $\hat \beta_1$ for the cases
@@ -393,20 +432,26 @@ and the two distributions superimpose on each other.
 with $X$ and redo 1) under the new assumptions. Report and plot your
 results. Comment.*
 
+| Correlation coeff      | $E[\hat \beta_0|X]$ | $E[\hat \beta_1|X]$ |
+|------------------------|--------------------:|--------------------:|
+| $r_{X, \epsilon}=0.8$  |               7.040 |               2.197 |
+| $r_{X, \epsilon}=0$    |               9.043 |               1.997 |
+| $r_{X, \epsilon}=-0.8$ |              11.036 |               1.798 |
+
 ```{r q6b0hat, echo = FALSE, results='asis', strip.white=TRUE}
 ggplot(bhat.cor, aes(x=b0hat, fill=type)) +
     geom_density(alpha=0.3) +
     theme_bw() +
     theme(legend.background=element_rect(),
-          legend.position=c(.9,.9)) +
-    labs(x="", y="Density") +
+          legend.position=c(.9,.85),
+          plot.title=element_text(hjust=.5)) +
+    labs(x="", y="Density", title=expression(paste("Distribution of ", beta[0]))) +
     scale_fill_manual(values=c("firebrick", "midnightblue", "forestgreen"),
                       name="",
                       breaks=c("Correlated", "Baseline", "Uncorrelated"),
                       labels=c(expression(paste(r[x][epsilon],"=",0.8)),
                                expression(paste(r[x][epsilon],"=",0)),
-                               expression(paste(r[x][epsilon],"=",-0.8))))
-                              
+                               expression(paste(r[x][epsilon],"=",-0.8))))                              
 ```
 
 The figure above compares the distribution of $\hat \beta_0$ for three
@@ -422,15 +467,15 @@ ggplot(bhat.cor, aes(x=b1hat, fill=type)) +
     geom_density(alpha=0.3) +
     theme_bw() +
     theme(legend.background=element_rect(),
-          legend.position=c(.9,.9)) +
-    labs(x="", y="Density") +
+          legend.position=c(.9,.85),
+          plot.title=element_text(hjust=.5)) +
+    labs(x="", y="Density", title=expression(paste("Distribution of ", beta[1]))) +
     scale_fill_manual(values=c("firebrick", "midnightblue", "forestgreen"),
                       name="",
                       breaks=c("Correlated", "Baseline", "Uncorrelated"),
                       labels=c(expression(paste(r[x][epsilon],"=",0.8)),
                                expression(paste(r[x][epsilon],"=",0)),
                                expression(paste(r[x][epsilon],"=",-0.8))))
-
 ```
 
 The figure shown above compares the distribution of $\hat \beta_1$ for
