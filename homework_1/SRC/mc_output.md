@@ -166,22 +166,72 @@ I use the following values for estimation:
 $\beta_0=9$, $\beta_1=2$, $\mu_x=10$, $\mu_{\epsilon}=0$,
 $\sigma_x^2=4$, $\sigma_{\epsilon}^2=1$, $r_{x\epsilon}=0$
 
+I define the model with the above parameters as the *baseline*
+model. As we move to the next questions, I compare the results of the
+baseline model with the models estimated in the questions.
+
 The implementation is given using the ```simulate.OLS``` function as
 shown below:
 
 ```r
 baseline <- simulate.OLS(muX=10, vX=4, muE=0, vE=1, r=0, n=100, N=100, b0=9, b1=2)
 ```
+The table given below reports the parameters of interest from the
+baseline model.
+
+| Coefficients                       | Baseline Model |
+|------------------------------------|---------------:|
+| $E[\hat \beta_0|X]$                |          9.043 |
+| $E[\hat \beta_1|X]$                |          1.997 |
+| $v[\hat \beta_0|X]$                |          0.267 |
+| $v[\hat \beta_1|X]$                |          0.003 |
+| $cov(\hat \beta_0, \hat \beta_1|X)$|         -0.026 |
+
+
 
 ![](mc_output_files/figure-html/beta0-1.png)<!-- -->
+The figure above shows the distribution of $\hat \beta_0$ in the
+baseline model compared to the *true* distribution of $\beta_0$. In
+this case, the baseline model mimics the theoretical distribution of
+random normal variable $\beta_0$. However, note that the mode of the
+baseline distribution (9.043) is slightly to the right of the true
+distribution (9.0). 
+
 
 ![](mc_output_files/figure-html/beta1-1.png)<!-- -->
+The figure above shows the distribution of $\hat \beta_1$ in the
+baseline model compared to the *true* distribution of $\beta_1$. The
+baseline distribution looks like the random normal distribution albeit
+with some deviations. The mode in this case is to the left of the mode
+of the true distribution.
 
-
+Note that, over repeated sampling (for, very large $N$), on average the distribution for the
+estimates will match asymptotically to the true distribution. (That
+is, the left and right skewed distributions will average out.)
 
 # Question 2
 *Now vary the sample size ($n$) and redo 1) under the new
 values. Report and plot your results. Comment.*
+
+Increasing $n$ implies that the researcher has more information about
+the relation between $y$ and $X$. Thus, if you have more data for
+estimation, the variance of the estimates will be lower. In addition,
+the estimates of regression coefficients will also be closer to the
+true value. To see the effect of change in sample size ($n$), I run
+the model with three different sample size:
+
+1. $n=10$ (Small sample)
+2. $n=100$ (Baseline)
+3. $n=1000$ (Large sample)
+
+Mathematically:
+
+$var(\hat \beta | X) = \sigma_{\epsilon}^2 (X'X)^{-1}$
+Large sample size implies a higher value for $(X'X)^{-1}$ and a lower
+value for $var(\hat \beta | X)$.
+
+The table given below reports the expected value of $\hat \beta$
+conditional on X.
 
 | Sample size ($n$) | $E[\hat \beta_0|X]$ | $E[\hat \beta_1|X]$ |
 |-------------------|--------------------:|--------------------:|
@@ -189,23 +239,56 @@ values. Report and plot your results. Comment.*
 | n=100             |               9.043 |               1.997 |
 | n=1000            |               8.988 |               2.001 |
 
+The table given below reports the expected variance of $\hat \beta$
+conditional on X.
+
+| Sample size ($n$) | $v[\hat \beta_0|X]$ | $v[\hat \beta_1|X]$ |
+|-------------------|--------------------:|--------------------:|
+| $n=10$            |              34.155 |               0.336 |
+| $n=100$           |               0.267 |               0.003 |
+| $n=1000$          |               0.003 |              0.0002 |
 
 
 ![](mc_output_files/figure-html/q2b0hat-1.png)<!-- -->
 
+The figure above shows the distribution of $\hat \beta_0$ for
+different values of $n$. As we increase the sample size from 10 to
+1000, we see that the expected value of $\hat \beta_0$ reaches close
+to the true value of $\beta_0$. In addition, the variance of the
+distribution reduces as we move from $n=10$ to $n=1000$.
 
 ![](mc_output_files/figure-html/q2b1hat-1.png)<!-- -->
+
+The figure shows the distribution of $\hat \beta_1$ as we increase the
+size of our sample. Once again, the expected value of $\hat \beta_1$
+reaches close to the true value of $\beta_1$ for large $n$ (and, the
+variance is lower).
 
 # Question 3
 *Now vary the number of samples ($N$) and redo 1) under the new value.s
 Report and plot your results. Comment.*
 
+Increasing the sample size, one would expect the expected values of
+coefficients to be closer to the true value and vice
+versa. Intuitively, one can think of drawing repeated samples from the
+same distribution. If we draw $N$ repeated samples (where, $N$ is
+large), on average one should be able to estimate coefficients that
+are closer to the true value. In order to see this effect on the
+estimates, I vary the sample size, $N$, using three different 
+criterion:
+
+1. N=10
+2. N=100
+3. N=10000
+
+The table given below shows the expected values of $\hat \beta$
+conditional on X.
+
 | No. of samples ($N$) | $E[\hat \beta_0|X]$ | $E[\hat \beta_1|X]$ |
 |----------------------|--------------------:|--------------------:|
 | N=10                 |               9.025 |               1.998 |
 | N=100                |               9.043 |               1.997 |
-| N=1000               |               9.001 |               2.000 |
-
+| N=10000              |               9.001 |               2.000 |
 
 
 ![](mc_output_files/figure-html/q3b0hat-1.png)<!-- -->
@@ -233,6 +316,7 @@ variation in $\hat \beta$ will decrease (increase).
 
 
 ![](mc_output_files/figure-html/q4b0hat-1.png)<!-- -->
+
 The figure shows the variation in $\hat \beta_0$ for three cases a)
 $\sigma_X^2=2$, b) $\sigma_X^2=4$ (baseline model), and c)
 $\sigma_X^2=16$. In case *a)*, $X$ has lower variance, which implies
@@ -246,7 +330,9 @@ shrink compared to the baseline model in *b)*.
 
         
 ![](mc_output_files/figure-html/q4b1hat-1.png)<!-- -->
-
+The figure above shows the variation in $\hat \beta_1$ for the cases
+mentioned above. The results are similar to $\hat \beta_0$ where the
+variance of estimates decreases as the variation in $X$ increases.
 
 # Question 5
 *Now set the mean of the error $\epsilon$ to be different from zero and
@@ -288,6 +374,7 @@ and the two distributions superimpose on each other.
 *Now draw the $\epsilon$ in such a way that it is in fact correlated
 with $X$ and redo 1) under the new assumptions. Report and plot your
 results. Comment.*
+
 
 | Correlation coeff      | $E[\hat \beta_0|X]$ | $E[\hat \beta_1|X]$ |
 |------------------------|--------------------:|--------------------:|
