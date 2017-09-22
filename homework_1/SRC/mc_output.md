@@ -1,6 +1,6 @@
 # Monte-Carlo Simulation
 Dhananjay Ghei  
-17th Sep 2017  
+22nd Sep 2017  
 
 
 <style type="text/css">
@@ -190,6 +190,7 @@ baseline model.
 
 
 ![](mc_output_files/figure-html/beta0-1.png)<!-- -->
+
 The figure above shows the distribution of $\hat \beta_0$ in the
 baseline model compared to the *true* distribution of $\beta_0$. In
 this case, the baseline model mimics the theoretical distribution of
@@ -199,6 +200,7 @@ distribution (9.0).
 
 
 ![](mc_output_files/figure-html/beta1-1.png)<!-- -->
+
 The figure above shows the distribution of $\hat \beta_1$ in the
 baseline model compared to the *true* distribution of $\beta_1$. The
 baseline distribution looks like the random normal distribution albeit
@@ -229,6 +231,12 @@ Mathematically:
 $var(\hat \beta | X) = \sigma_{\epsilon}^2 (X'X)^{-1}$
 Large sample size implies a higher value for $(X'X)^{-1}$ and a lower
 value for $var(\hat \beta | X)$.
+
+
+```r
+smallSample <- simulate.OLS(muX=10, vX=4, muE=0, vE=1, r=0, n=10, N=100, b0=9, b1=2)
+largeSample <- simulate.OLS(muX=10, vX=4, muE=0, vE=1, r=0, n=1000, N=100, b0=9, b1=2)
+```
 
 The table given below reports the expected value of $\hat \beta$
 conditional on X.
@@ -281,6 +289,12 @@ criterion:
 2. N=100
 3. N=10000
 
+
+```r
+smallN <- simulate.OLS(muX=10, vX=4, muE=0, vE=1, r=0, n=100, N=10, b0=9, b1=2)
+largeN <- simulate.OLS(muX=10, vX=4, muE=0, vE=1, r=0, n=100, N=10000, b0=9, b1=2)
+```
+
 The table given below shows the expected values of $\hat \beta$
 conditional on X.
 
@@ -307,6 +321,16 @@ $var(\hat \beta | X) = \sigma_{\epsilon}^2 (X'X)^{-1}$
 
 Thus, if we increase (decrease) the variation in $X$, one would expect that the
 variation in $\hat \beta$ will decrease (increase).
+
+
+```r
+lowXvar <- simulate.OLS(muX=10, vX=2, muE=0, vE=1, r=0, n=100, N=100, b0=9, b1=2)
+highXvar <- simulate.OLS(muX=10, vX=16, muE=0, vE=1, r=0, n=100, N=100, b0=9, b1=2)
+```
+
+The table given below shows the expected value of $\hat \beta$
+conditional on $X$ when the distribution of $X$ has different
+variances.
 
 | Dist. of X      | $E[\hat \beta_0|X]$ | $E[\hat \beta_1|X]$ |
 |-----------------|--------------------:|--------------------:|
@@ -339,15 +363,24 @@ variance of estimates decreases as the variation in $X$ increases.
 redo 1) under the new values. Comment.*
 
 In particular, one can, mathematically, show that a change in the mean of $\epsilon$
-affects *only* the intercept. Consider $E[\mu_{\epsilon}] = a$ (some constant,
+affects *only* the intercept. Consider $E[\epsilon] = a$ (some constant,
 say). One can re-write the original model as:
 
 $y_i = \tilde{\beta_0} + x_i \beta_1 + u_i$
 
 where, $\tilde{\beta_0}=\beta_0+a$, and, $u_i = \epsilon_i-a$.
-Thus, we get, $E[\mu_{u_i}]=0$
+Thus, we get, $E[u_i | X]=0$
 Therefore, one would expect the intercept to shift by $a$ and the
 slope coefficient to remain unchanged.
+
+
+```r
+epsDist <- simulate.OLS(muX=10, vX=4, muE=2, vE=1, r=0, n=100, N=100, b0=9, b1=2)
+```
+
+The table given below shows the expected value of $\hat \beta$
+conditional on $X$ for cases when the mean of $\epsilon$ is $\neq 0$
+and when it is 0.
 
 | Error term         | $E[\hat \beta_0|X]$ | $E[\hat \beta_1|X]$ |
 |--------------------|--------------------:|--------------------:|
@@ -375,6 +408,25 @@ and the two distributions superimpose on each other.
 with $X$ and redo 1) under the new assumptions. Report and plot your
 results. Comment.*
 
+If $X$ is correlated with $\epsilon$ then the strict exogeneity
+assumption is violated. Mathematically,
+
+$E[\hat \beta | X] = \beta + X(X'X)^{-1}X' E[\epsilon | X]$
+
+Since, $X$ and $\epsilon$ are correlated, $E[\epsilon | X] \neq 0$
+Thus, OLS will give biased estimates of the coefficients. In addition,
+the nature of bias will depend on the correlation coefficient as well
+as $(X'X)^{-1}X'$
+
+
+```r
+baselinePCor <- simulate.OLS(muX=10, vX=4, muE=0, vE=1, r=0.8, n=100, N=100, b0=9, b1=2)
+baselineNCor <- simulate.OLS(muX=10, vX=4, muE=0, vE=1, r=-0.8, n=100, N=100, b0=9, b1=2)
+```
+
+The table given below shows the expected value of $\hat \beta$
+conditional on $X$ for the cases when $X$ is correlated with
+$\epsilon$ along with the baseline model.
 
 | Correlation coeff      | $E[\hat \beta_0|X]$ | $E[\hat \beta_1|X]$ |
 |------------------------|--------------------:|--------------------:|
