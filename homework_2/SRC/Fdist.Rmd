@@ -1,0 +1,396 @@
+---
+title       : Monte-Carlo Simulation (F and t-distribution tests)
+author      : Dhananjay Ghei
+date        : 29th Sep 2017
+job         : UMN
+output      :
+            html_document:
+                toc: true
+                toc_float: true
+                mathjax: local
+                self_contained: false
+                keep_md: true
+geometry    : margin=0.5in
+theme       : cerulean
+---
+
+
+<style type="text/css">
+
+body{ /* Normal  */
+   font-size: 14px;
+}
+
+h1 { /* Header 1 */
+ font-size: 22px;
+ color: DarkBlue;
+}
+h2 { /* Header 2 */
+   font-size: 19px;
+   color: DarkBlue;
+}
+td{font-size: 11pt;
+   padding:0px;
+   cellpadding="0";
+   cellspacing="0"
+}
+th {font-size: 11pt;
+   height: 20px;
+   font-weight: bold;
+   text-align: center;
+   background-color:
+   #ccccff;
+}
+table{border-spacing:
+	0px;
+	border-collapse:
+	collapse;
+}
+
+</style>
+								
+# Monte-Carlo to Assess Finite Sample Distribution Results
+
+This article demonstrates a method to do Monte-Carlo simulations in R
+for a two variable linear regression and assess the finite sample
+properties of OLS estimators. The source code for this exercise
+is available [online](https://www.github.com/dhananjayghei/econometrics) in the
+Github repository. (https://www.github.com/dhananjayghei/econometrics)
+
+## Setup
+We will operate with the following model:
+
+   $y_i = \beta_0 + x_i \beta_1 + \epsilon_i$
+   
+where, $y_i$ and $x_i$ are random variables. We observe $N$ samples
+   of $i=1,2, \dots, n$ obersvations of $y$ and $x$.
+
+We will estimate
+   
+   $y_i = \hat \beta_0 + x_i \hat \beta_1 + e_i$
+
+```{r setOptions, message=FALSE, echo=FALSE, results='hide', warning=FALSE, include = FALSE}
+source("monte_carloF.R")
+```
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=8, fig.height=6, echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+
+## Drawing random samples
+I write a function that draws $N$ random samples of size $n$ for the
+variables $\epsilon$ and $x_i$. This function takes as arguments the
+following:
+
+1. ```muX``` - True mean of X
+2. ```vX``` - True variance of X
+3. ```muE``` - True mean of $\epsilon$
+4. ```vE``` - True variance of $\epsilon$
+5. ```r``` - Correlation between $\epsilon$ and $X$
+6. ```n``` - Sample size
+7. ```N``` - Number of samples
+
+
+```{r drawFun, eval=FALSE, echo=TRUE, results='asis'}
+draw <- function(muX, vX, muE, vE, r, n, N){
+    set.seed(123)
+    dat <- lapply(1:N, function(y){
+        # Generating 2 random variables X and epsilon
+        k <- mvrnorm(n=n, mu=c(muX, muE),
+                     Sigma=matrix(c(vX, r, r, vE), nrow=2), empirical=FALSE)
+        k <- data.frame(k)
+        colnames(k) <- c("x", "eps")
+        return(k)
+    })
+    return(dat)
+}
+```
+## Generating $y$ (dependent variable)
+
+Next, I define a function that designs a matrix which generates $y$
+for given $X$ and $\epsilon$. It also adds a column of 1s to make
+matrix multiplication easier. This function takes the following
+arguments:
+
+1. ```data``` - A sample of $X$ and $\epsilon$
+2. ```b0``` - True value of $\beta_0$
+3. ```b1``` - True value of $\beta_1$
+
+```{r designFun, eval=FALSE, echo=TRUE, results='asis'}
+design <- function(data, b0, b1){
+    # Generating a column for intercecpt
+    data[, "const"] <- rep(1, nrow(data))
+    # Creating the true beta matrix
+    betaT <- as.matrix(x=c(b0, b1), nrow=2, ncol=1)
+    # Generating y = b0 + b1*x + epsilon
+    data[, "y"] <- as.numeric(as.matrix(data[, c("const", "x")]) %*% betaT) + data[, "eps"]
+    # Re-arranging the columns for easy readability
+    data <- data[, c("y", "const", "x", "eps")]
+    return(data)
+}
+```
+
+## Putting it all together
+The next step is to build a wrapper function that draws random
+samples, designs a matrix for OLS, runs OLS on each sample and returns
+output as the predicted values of coefficients ($\hat \beta_0$, $\hat
+\beta_1$) and the variance-covariance matrix of $\hat \beta$. This
+function takes as arguments values for both the ```draw``` function and the
+```design``` function defined above.
+
+```{r simulateFun, eval=FALSE, echo=TRUE, results='asis'}
+simulate.OLS <- function(muX, vX, muE, vE, r, n, N, b0, b1){
+    dat <- draw(muX=muX, vX=vX, muE=muE, vE=vE, r=r, n=n, N=N)
+    dat <- lapply(dat, function(x) design(data=x, b0=b0, b1=b1))
+    # Running OLS
+    OLS <- lapply(dat, function(z){
+        reg <- lm(y~x, data=z)
+    })
+    # Computing the f-stat
+    Fstat <- lapply(OLS, function(x){
+        k <- summary(x)
+        Fstat <- (k$coefficients[2, 1]-b1)^2/k$coefficients[2, 2]
+        return(Fstat)
+        })
+    Dist <- data.frame(do.call(rbind, Fstat))
+    colnames(Dist)[1] <- "Fstat"
+    Dist$tstat <- sqrt(Dist$Fstat)
+    # Storing the F statistic from the regression (This gives the
+    distribution under the Null that \beta_1 = 0)
+    FstatMod <- do.call(rbind, lapply(OLS, function(x) summary(x)$fstatistic))
+    # Storing the estimated betas
+    bhat <- data.frame(do.call(rbind, lapply(OLS, coef)))
+    colnames(bhat) <- c("b0hat", "b1hat")
+    rownames(bhat) <- NULL
+    # Finding the x'x inverse
+    xxInv <- lapply(dat, function(z){
+            mat <- as.matrix(z[, c("const", "x")])
+            Inv <- ginv(crossprod(mat))
+            return(Inv)
+    })
+    # Finding the mean of inverse matrices
+    xxInv.avg <- Reduce('+', xxInv)/n
+    return(list(bEst=bhat, xxInv=xxInv.avg, Dist=Dist, FstatMod=FstatMod))
+}
+```
+
+# Question 1
+*Draw 1000 samples and run regressions 1000 times for each sample -
+and compute $\tilde{F}$ using either the coefficients directly or the
+change in $R^2$ formulation. For the homework, plot these 1000 values
+of $\tilde{F}$ against a plot of $F(1, n-2)$ and see if the
+distrbutions look similar*
+
+I assume that the $\epsilon$ and the regressors are
+uncorrelated. In addition, I assume that both $X$ and $\epsilon$ are drawn from a
+normal distribution $\epsilon \sim N(0, \sigma_{\epsilon}^2), X \sim
+N(\mu_x, \sigma_x^2)$. 
+
+I use the following values for estimation:
+$\beta_0=9$, $\beta_1=2$, $\mu_x=10$, $\mu_{\epsilon}=0$,
+$\sigma_x^2=.04$, $\sigma_{\epsilon}^2=1$, $r_{x\epsilon}=0$
+
+I define the model with the above parameters as the *baseline*
+model.
+
+The implementation is given using the ```simulate.OLS``` function as
+shown below:
+```{r simulateQ1, echo=TRUE, eval=FALSE}
+baseline <- simulate.OLS(muX=10, vX=.04, muE=0, vE=1, r=0,
+                         n=1000, N=1000, b0=9, b1=2)
+```
+One would expect the $\tilde{F}$ to follow the $F$ distribution under
+the null hypothesis that $\beta_1=2$ and not under the null that
+$\beta_1=0$. Mathematically,
+
+$\tilde{F} = \frac{(R\beta-r)'[s^2 R(X'X)^{-1}R']^{-1}(R\beta-r)}{1}
+\sim F(1, 998)$
+
+```{r beta1F2, echo=FALSE, results='asis', strip.white=TRUE}
+hist(baseline[[3]][, 1], freq=FALSE, ylim=c(0, 4),
+     ylab="Density", xlab="", main=expression(paste("F-Distribution under the null ", beta[1], "=2", sep="")), col="midnightblue", density=50)
+# Theoretical F distribution
+x <- rf(n=100000, df1=1, df2=998)
+curve(df(x=x, df1=1, df2=998), lwd=2, type="l", col="firebrick", add=TRUE)
+legend("topright", col=c("midnightblue", "firebrick"),
+       legend=c("Monte-carlo distribution", "True distribution"),
+       bty="n", lty=c(1,1))
+
+```
+
+The figure above shows the distribution of $\tilde{F}$ along with the
+actual $F$ distribution. The true $F$ distribution is represented by a line
+whereas the monte-carlo distribution is represented by the histogram. Under the null, $H_0: \beta_1=2$, $\tilde{F}$
+follows a F distribution as evident in the figure above. However, if
+we change the null to $H_0: \beta_1=0$, $\tilde{F}$ no longer follows
+the $F$ distribution as shown in the figure below. 
+
+```{r beta1F0, echo=FALSE, results='asis', strip.white=TRUE}
+hist(baseline[[4]][, 1], freq=FALSE, xlim=c(0, 250),
+     ylab="Density", xlab="", main=expression(paste("F-Distribution under the null ", beta[1], "=0", sep="")), col="midnightblue", density=50)
+# Theoretical F distribution
+x <- rf(n=100000, df1=1, df2=998)
+curve(df(x=x, df1=1, df2=998), lwd=2, type="l", col="firebrick", add=TRUE)
+legend("topright", col=c("midnightblue", "firebrick"),
+       legend=c("Monte-carlo distribution", "True distribution"),
+       bty="n", lty=c(1,1), cex=.8)
+```
+
+
+```{r beta1T, echo=FALSE, results='asis', strip.white=TRUE}
+hist(c(baseline[[3]][, 2], -baseline[[3]][, 2]), freq=FALSE, ylim=c(0, 1), xlim=c(-4, 4),
+     ylab="Density", xlab="",
+     main=expression(paste("t-Distribution under the null ",
+                           beta[1], "=2", sep="")),
+     col="midnightblue", density=50)
+# Theoretical t distribution
+x <- rt(n=1000, df=998)
+curve(dt(x=x, df=998), type="l", lwd=2, col="firebrick", add=TRUE)
+legend("topright", col=c("midnightblue", "firebrick"),
+       legend=c("Monte-carlo distribution", "True distribution"),
+       bty="n", lty=c(1,1))
+```
+
+The figure above shows the corresponding t-distribution (represented
+by a line) against the
+theoretical t-distribution $t(998)$ (represented by a histogram)
+
+# Question 2
+*Change the parameter values and redo the plot*
+
+I change the value of the slope coefficient $\beta_1$ from 2 to 4.
+I run the ```simulate.OLS``` function with the new slope coefficients
+and plot the F and t distributions.
+
+
+```{r param, echo=TRUE, eval=FALSE, results='asis'}
+param <- simulate.OLS(muX=10, vX=.04, muE=0, vE=1, r=0,
+                      n=1000, N=1000, b0=9, b1=4)
+```
+
+
+```{r beta1paramF2, echo=FALSE, results='asis', strip.white=TRUE}
+hist(param[[3]][, 1], freq=FALSE, ylim=c(0, 3.5),
+     ylab="Density", xlab="", main=expression(paste("F-Distribution under the null ", beta[1], "=4", sep="")), col="midnightblue", density=50)
+# Theoretical F distribution
+x <- rf(n=100000, df1=1, df2=998)
+curve(df(x=x, df1=1, df2=998), lwd=2, type="l", col="firebrick", add=TRUE)
+legend("topright", col=c("midnightblue", "firebrick"),
+       legend=c("Monte-carlo distribution", "True distribution"),
+       bty="n", lty=c(1,1))
+```
+The figure above shows the $\tilde{F}$ distribution against the true
+$F$ distribution. The true $F$ distribution is represented by a line
+whereas the monte-carlo distribution is represented by the histogram.
+        
+```{r beta1paramF0, echo = FALSE, results = 'asis', strip.white=TRUE}
+hist(param[[4]][, 1], freq=FALSE, xlim=c(0, 900),
+     ylab="Density", xlab="", main=expression(paste("F-Distribution under the null ", beta[1], "=0", sep="")), col="midnightblue", density=50)
+# Theoretical F distribution
+x <- rf(n=100000, df1=1, df2=998)
+curve(df(x=x, df1=1, df2=998), lwd=2, type="l", col="firebrick", add=TRUE)
+legend("topleft", col=c("midnightblue", "firebrick"),
+       legend=c("Monte-carlo distribution", "True distribution"),
+       bty="n", lty=c(1,1), cex=.8)
+
+```
+
+
+```{r beta1paramT, echo=FALSE, results='asis', strip.white=TRUE}
+hist(c(param[[3]][, 2], -param[[3]][, 2]), freq=FALSE,
+     ylim=c(0, 1), xlim=c(-4, 4),
+     ylab="Density", xlab="",
+     main=expression(paste("t-Distribution under the null ",
+                           beta[1], "=4", sep="")),
+     col="midnightblue", density=50)
+x <- rt(n=1000, df=998)
+curve(dt(x=x, df=998), type="l", lwd=2, col="firebrick", add=TRUE)
+legend("topright", col=c("midnightblue", "firebrick"),
+       legend=c("Monte-carlo distribution", "True distribution"),
+       bty="n", lty=c(1,1))
+```
+
+# Question 3
+*Change the sample size $n$ and redo the plots.*
+
+I change the sample size $n$ from 1000 to 10 and see how the
+properties of $\tilde{F}$ change with respect to small sample.
+
+```{r Nsample, echo=TRUE, eval=FALSE, results='asis'}
+sampleSize <- simulate.OLS(muX=10, vX=.04, muE=0, vE=1, r=0,
+                      n=10, N=1000, b0=9, b1=2)
+```
+
+
+```{r beta1SampleF, echo = FALSE, results = 'asis', strip.white = TRUE}
+hist(sampleSize[[3]][, 1], freq=FALSE, ylim=c(0, .4),
+     ylab="Density", xlab="", main=expression(paste("F-Distribution under the null ", beta[1], "=2", sep="")), col="midnightblue", density=50)
+# Theoretical F distribution
+x <- rf(n=100000, df1=1, df2=998)
+curve(df(x=x, df1=1, df2=998), lwd=2, type="l", col="firebrick", add=TRUE)
+legend("topright", col=c("midnightblue", "firebrick"),
+       legend=c("Monte-carlo distribution", "True distribution"),
+       bty="n", lty=c(1,1))
+```
+The figure above shows the distribution of $\tilde{F}$ against the
+true $F$ distribution under the null that $\beta_1=2$. It looks
+similar to the $F$ distribution. And, the corresponding t-distribution
+figure is shown below.
+
+```{r beta1SampleT, echo=FALSE, results='asis', strip.white=TRUE}
+# Theoretical t distribution
+hist(c(sampleSize[[3]][, 2], -sampleSize[[3]][, 2]), freq=FALSE, ylim=c(0, .4), xlim=c(-4,4), ylab="Density", xlab="",
+     main=expression(paste("t-Distribution under the null ",
+                           beta[1], "=2", sep="")),
+     col="midnightblue", density=50)
+x <- rt(n=1000, df=998)
+curve(dt(x=x, df=998), type="l", lwd=2, col="firebrick", add=TRUE)
+legend("topright", col=c("midnightblue", "firebrick"),
+       legend=c("Monte-carlo distribution", "True distribution"),
+       bty="n", lty=c(1,1))
+```
+
+# Question 4
+*Make $X$ multivariate normal. Try to allow for some correlation between
+the $X's$. Repeat the above analysis in this multivariate setting.*
+
+I estimate the following model:
+
+$y_i= \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \epsilon_i$
+
+where, $i = 1,2, \dots, n$
+
+
+I use the following values for estimation:
+$\mu_{X1}=5$, $\mu_{X2}=6$, $\mu_{\epsilon}=0$,
+$r_{X1,\epsilon}=0$, $r_{X2,\epsilon}=0$, $r_{X1,X2}=.001$,
+$v_{X1}=.04$, $v_{X2}=.04$, $v_{\epsilon}=1$
+
+The slope coefficients are given by: $\beta_0=9$, $\beta_1=2$,
+$\beta_2=5$.
+
+
+```{r MVbeta12F, echo=FALSE, results='asis', strip.white=TRUE}
+hist(Fstat[, 1], freq=FALSE, xlim=c(0, 800), ylim=c(0, 0.008), 
+     ylab="Density", xlab="", main=expression(paste("F-Distribution under the null ", beta[1], ",", beta[2], "=0", sep="")), col="midnightblue", density=50)
+# Theoretical F distribution
+x <- rf(n=100000, df1=2, df2=997)
+curve(df(x=x, df1=2, df2=997), lwd=2, type="l", col="firebrick", add=TRUE)
+legend("topright", col=c("midnightblue", "firebrick"),
+       legend=c("Monte-carlo distribution", "True distribution"),
+       bty="n", lty=c(1,1), cex=.8)
+```
+
+```{r MVbeta12T, echo=FALSE, results='asis', strip.white=TRUE}
+hist(c(Fstat[, 2], -Fstat[, 2]), freq=FALSE, ylim=c(0, .5), xlim=c(-30, 30),
+     ylab="Density", xlab="",
+     main=expression(paste("t-Distribution under the null ",
+                           beta[1], ",", beta[2], "=0", sep="")),
+     col="midnightblue", density=50)
+x <- rt(n=1000, df=997)
+curve(dt(x=x, df=997), type="l", lwd=2, col="firebrick", add=TRUE)
+legend("topright", col=c("midnightblue", "firebrick"),
+       legend=c("Monte-carlo distribution", "True distribution"),
+       bty="n", lty=c(1,1))
+```

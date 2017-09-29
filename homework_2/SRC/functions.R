@@ -54,6 +54,17 @@ simulate.OLS <- function(muX, vX, muE, vE, r, n, N, b0, b1){
     OLS <- lapply(dat, function(z){
         reg <- lm(y~x, data=z)
     })
+    # Storing the f-stat
+    Fstat <- lapply(OLS, function(x){
+        k <- summary(x)
+        Fstat <- (k$coefficients[2, 1]-b1)^2/k$coefficients[2, 2]
+        return(Fstat)
+        })
+    FstatMod <- do.call(rbind, lapply(OLS, function(x) summary(x)$fstatistic))
+    Dist <- data.frame(do.call(rbind, Fstat))
+    colnames(Dist)[1] <- "Fstat"
+    Dist$tstat <- sqrt(Dist$Fstat)
+#    Dist <- Dist[, c(1, 4)]
     # Storing the estimated betas
     bhat <- data.frame(do.call(rbind, lapply(OLS, coef)))
     colnames(bhat) <- c("b0hat", "b1hat")
@@ -66,5 +77,5 @@ simulate.OLS <- function(muX, vX, muE, vE, r, n, N, b0, b1){
     })
     # Finding the mean of inverse matrices
     xxInv.avg <- Reduce('+', xxInv)/n
-    return(list(bEst=bhat, xxInv=xxInv.avg))
+    return(list(bEst=bhat, xxInv=xxInv.avg, Dist=Dist, FstatMod=FstatMod))
 }
