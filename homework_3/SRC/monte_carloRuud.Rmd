@@ -1,0 +1,168 @@
+---
+title       : Monte-Carlo Simulation
+author      : Dhananjay Ghei
+date        : 29th Sep 2017
+job         : UMN
+output      :
+            html_document:
+                toc: true
+                toc_float: true
+                mathjax: local
+                self_contained: false
+                keep_md: true
+geometry    : margin=0.5in
+theme       : cerulean
+---
+
+
+<style type="text/css">
+
+body{ /* Normal  */
+   font-size: 14px;
+}
+
+h1 { /* Header 1 */
+ font-size: 22px;
+ color: DarkBlue;
+}
+h2 { /* Header 2 */
+   font-size: 19px;
+   color: DarkBlue;
+}
+td{font-size: 11pt;
+   padding:0px;
+   cellpadding="0";
+   cellspacing="0"
+}
+th {font-size: 11pt;
+   height: 20px;
+   font-weight: bold;
+   text-align: center;
+   background-color:
+   #ccccff;
+}
+table{border-spacing:
+	0px;
+	border-collapse:
+	collapse;
+}
+
+</style>
+								
+# Monte-Carlo Experiment
+
+This article demonstrates a method to do Monte-Carlo simulations in R
+for a two variable linear regression and assess the finite sample
+properties of OLS estimators. The source code for this exercise
+is available [online](https://www.github.com/dhananjayghei/econometrics) in the
+Github repository. (https://www.github.com/dhananjayghei/econometrics)
+
+## Question (6.1 - Ruud)
+Carry out the following Monte-Carlo experiment:
+
+1. Compute 100 draws of a pseudorandom variable $x_n$ from a uniform
+distribution $[1, 10]$
+2. Compute 100 conditional draws of a pseudorandom variable $y_n
+(n=1,2, \dots, N)$ from a normal distribution with conditional mean
+equal to $10-x_n-\frac{25}{x_n}$ and conditional variance equal to 25.
+3. Compute the OLS fitted coefficients of the regression function
+$E[y_n | x_n] = \beta_{01} + \beta_{02} x_n + \beta_{03} x_n^{-1}$.
+
+Repeat steps 2 and 3 of this experiment 1000 times holding $x_n$
+constant and compute the sample means of the three fitted
+coefficients. How do they compare to the population coefficients? Also
+graph a frequency plot of each set of fitted coefficients.
+
+
+## Setup
+We will operate with the following model:
+
+   $y_i = \beta_0 + x_i \beta_1 + \epsilon_i$
+   
+where, $y_i$ and $x_i$ are random variables. We observe $N$ samples
+   of $i=1,2, \dots, n$ obersvations of $y$ and $x$.
+
+We will estimate
+   
+   $y_i = \hat \beta_0 + x_i \hat \beta_1 + e_i$
+
+```{r setOptions, message=FALSE, echo=FALSE, results='hide', warning=FALSE, include = FALSE}
+source("monte_carloRuud.R")
+```
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=8, fig.height=6, echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+
+## Setting up
+I generate psuedorandom variable $x_n$ from the uniform distribution
+$[1, 10]$. This is done in ```R``` using the ```runif``` function.
+
+```{r draw, eval=FALSE, echo=TRUE, results='asis', strip.white=TRUE}
+set.seed(123)
+X <- runif(n=100, min=1, max=10)
+```
+
+Next, I write a function ```(simulate.OLS)``` that draws $y_n$ conditional on $x_n$ as
+$y_n = 10-x_n-\frac{25}{x_n}$, runs OLS regression and returns the
+regression coefficients as the output. The function takes as argument
+the following:
+
+1. ```Xn```: vector, representing the X series
+2. ```vY```: numeric, representing the variance of Y
+
+```{r Fun, eval=FALSE, echo=TRUE, results='asis', strip.white=TRUE}
+simulate.OLS <- function(Xn, vY){
+    # Generating reciprocal of X
+    Xinv <- 1/Xn
+    # Generating y_n
+    Y <- rnorm(n=100, mean=10-X-(25/X), sd=sqrt(vY))
+    reg <- lm(Y~Xn+Xinv)
+    Coeff <- summary(reg)$coefficients[, 1]
+    return(Coeff)
+}
+```
+
+## Running Monte-Carlo experiment
+
+Finally, I run the regression 1000 times keeping $x_n$ the same as
+```X```. The implementation is shown below:
+
+```{r Imp, eval=FALSE, echo=TRUE, results='asis', strip.white=TRUE}
+regRuns <- lapply(1:1000, function(...) simulate.OLS(Xn=X, vY=25))
+```
+
+The table given below reports the conditional mean of the three fitted
+coefficients against the true population coefficients.
+
+| Coefficients           | True value | Estimated value |
+|------------------------|-----------:|----------------:|
+| $E[\hat \beta_{01}|X]$ |         10 |            9.93 |
+| $E[\hat \beta_{02}|X]$ |         -1 |           -0.99 |
+| $E[\hat \beta_{03}|X]$ |        -25 |          -24.89 |
+
+
+```{r b01, echo=FALSE, results='asis', strip.white=TRUE}
+hist(sampleCoefs[, 1], freq=FALSE,
+     density=50, col="midnightblue",
+     xlab="",
+     main=expression(paste("Distribution of ", beta[03])))
+lines(density(sampleCoefs[, 1]), col="firebrick", lwd=2)
+```
+
+```{r b02, echo=FALSE, results='asis', strip.white=TRUE}
+hist(sampleCoefs[, 2], freq=FALSE,
+     density=50, col="midnightblue",
+     xlab="",
+     main=expression(paste("Distribution of ", beta[03])))
+lines(density(sampleCoefs[, 2]), col="firebrick", lwd=2)
+```
+
+```{r b03, echo=FALSE, results='asis', strip.white=TRUE}
+hist(sampleCoefs[, 3], freq=FALSE, ylim=c(0, 0.08),
+     density=50, col="midnightblue",
+     xlab="",
+     main=expression(paste("Distribution of ", beta[03])))
+lines(density(sampleCoefs[, 3]), col="firebrick", lwd=2)
+```
