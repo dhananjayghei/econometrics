@@ -1,0 +1,306 @@
+\documentclass{article}
+\usepackage{float} \usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{amsmath, amsthm}
+\title{Homework 10: Econometrics\\
+  ECON8206}
+\author{Dhananjay Ghei}
+\floatstyle{ruled} \restylefloat{table} \restylefloat{figure}
+\newcommand{\floatintro}[1]{
+  
+  \vspace*{0.1in}
+  
+  {\footnotesize
+
+    #1
+    
+  }
+  
+  \vspace*{0.1in} } \newcommand{\myrule}{\noindent\rule{16cm}{0.5pt}}
+\addtolength{\textwidth}{100pt} \addtolength{\evensidemargin}{-40pt}
+\addtolength{\oddsidemargin}{-40pt} \addtolength{\topmargin}{-70pt}
+\addtolength{\textheight}{1.5in}
+\newenvironment{solution}{\noindent\textit{Solution.}}{\qed}
+\setlength{\parindent}{0in} \setlength{\parskip}{8pt}
+
+\begin{document}
+\maketitle
+% \section*{Question 1}
+% \textit{Work on your projects. Final is Wednesday December 6 and
+% presentations are Monday December 11 and Wednesday December 13.}
+For \textit{Question 2 and 3}, I write a general setup that does the
+work for both the cases. The setup of the model is:
+$\beta_0=1$, $\beta_1=2$, $X \sim N(4, 9)$, $\varepsilon \sim N(0, 1)$,
+$\eta \sim N(0, 1)$, $\alpha \sim N(0, 1)$. Next, I write
+\texttt{draw} function that draws the random variables and $X$. Here,
+I also create \texttt{x.cor} which is a random variable that depends
+on the initial \texttt{x} and \texttt{alphan}. If \texttt{r=1}, then
+there is no correlation between $X_{it}$ and $\alpha_i$ and one would
+expect that the random effects estimator will be the efficient
+estimator and will give us the correct standard errors\footnote{This
+  will be used in answering Question 2}. However, if
+\texttt{r}$\neq 1$, then one would expect the fixed effects estimator
+to give the correct standard errors\footnote{This will be used in
+  answering Question 3}. 
+\begin{verbatim}
+# Function to draw random variable for error components model
+# n - sample size
+# N - Number of samples
+# t - time periods 
+# r - correlation between x and alpha
+draw <- function(n, N, t, r){
+    set.seed(123)
+    dat <- lapply(1:N, function(x){
+        eps <- rnorm(n*t, mean=0, sd=1)
+        x <- rnorm(n*t, mean=4, sd=9)
+        nut <- rnorm(t, mean=0, sd=1)
+        alphan <- rnorm(n, mean=0, sd=1)
+        x.cor <- x*r+sqrt(1-r^2)*rep(alphan, times=rep(t, n))
+        datM <- data.frame(x=x, x.cor=x.cor, nut=rep(nut, n),
+                           alphan=rep(alphan, times=rep(t, n)), eps=eps)
+        return(datM)
+    })
+    return(dat)
+}
+\end{verbatim}
+Next, I write \texttt{design} function that constructs the $Y$
+variable along with other variables.
+\begin{verbatim}
+# Function to construct the data set for regression
+# dat - data frame - the output from the draw object
+# b0 - the true intercept 
+# b1 - the true slope coefficient
+design <- function(dat, b0, b1){
+    dat$y <- t(rep(b0, nrow(dat)) + b1%*%dat$x.cor + rowSums(dat[, -c(1:2)]))
+    dat$const <- rep(1, nrow(dat))
+    dat <- dat[, c("y", "const", "x", "x.cor", "nut", "alphan", "eps")]
+    return(dat)
+}
+\end{verbatim}
+Following this, I write a general function which estimates the OLS,
+random effects and fixed effects estimators for each sample. The
+function also runs Hausman test (as a sanity check) to compare the
+fixed effects vs random effects model. This is useful to investigate
+if our specification is correct or not. In addition, if the null
+hypothesis of no correlation is not rejected the random effects
+estimator is the efficient estimator and gives the correct standard
+errors. 
+\begin{verbatim}
+# Function to run regressions
+# dat - data frame - the output from the design object
+# This function runs three different regressions (OLS, Random effects and fixed effects)
+# In addition, it also does a Hausman test to check for RE vs FE in the model
+# The Hausman test is a sanity check to identify which model gives the
+# correct SE
+simulateReg <- function(dat){
+    temp <- pdata.frame(dat, index=c("alphan", "nut"))
+    # OLS regression
+    lmReg <- lm(y~x.cor, data=dat)
+    # Two way random effects (Efficient SE)
+    pols <- plm(y~x.cor, data=temp, effect="twoways", model="random")
+    # Fixed effects
+    feReg <- plm(y~x.cor, data=temp, effect="individual", model="within")
+    # (Sanity check) Hausman test for RE vs FE
+    if(phtest(pols, feReg)$p.value>0.05){
+        cat("RE estimator works \n")
+    }else{
+        cat("FE estimator works \n")
+    }
+    return(list(OLS=lmReg, RE=pols, FE=feReg))    
+}
+\end{verbatim}
+Finally, I write a function that generates tables for comparing the
+estimates. 
+\begin{verbatim}
+# Generating tables for output
+# Reg - the output from simulateReg 
+genOutput <- function(Reg){
+    estimates <- lapply(Reg, function(x){
+        se.OLS <- summary(x[[1]])$coefficients[2, 1:2]
+        se.RE <- summary(x[[2]])$coefficients[2, 1:2]
+        se.FE <- summary(x[[3]])$coefficients[, 1:2]
+        return(list(se.OLS=se.OLS, se.RE=se.RE, se.FE=se.FE))
+    })
+    olsEst <- data.frame(do.call(rbind, lapply(estimates, function(x) x[[1]])))
+    reEst <- data.frame(do.call(rbind, lapply(estimates, function(x) x[[2]])))
+    feEst <- data.frame(FE=do.call(rbind, lapply(estimates, function(x) x[[3]])))
+    return(list(OLS=olsEst, RE=reEst, FE=feEst))
+}
+\end{verbatim}
+Now we are ready to answer the questions in the problem set.
+\section*{Question 2}
+Write down a error components model with one regressor
+\begin{equation}
+  \label{eq:1}
+  y_{it} = \beta_0 + \beta_1 X_{it} + \nu_{it}
+\end{equation}
+with
+\begin{equation}
+  \label{eq:2}
+  \nu_{it} = \alpha_i + \eta_t + \varepsilon_{it}
+\end{equation}
+with mean zero distributions chose for each of these random
+variables. Use the monte carlo to show that OLS is consistent but the
+formula for the standard errors is not. Derive the correct formula for
+the standard errors, estimate them and show that they indeed match
+what the monte carlos generate for standard errors.\\ \myrule\\
+I draw random samples of $n=100$, $N=100$ and $t=20$ with correlation
+between $X_{it}$ and $\alpha_i$ as 0 (i.e. $r=1$) and use the
+functions from above to get the results.
+\begin{verbatim}
+# ----------------- Monte Carlo Q2
+# Drawing random normal variables
+dat <- draw(n=100, N=100, t=20, r=1)
+# Constructing the datasets for regressions
+dat <- lapply(dat, function(x) design(x, b0=1, b1=2))
+# Running OLS, RE and FE regressions
+reg <- lapply(dat, simulateReg)
+# Generating output
+result <- genOutput(reg)
+# Storing the mean of the slope and standard errors
+tab <- round(data.frame(do.call(rbind, lapply(result, colMeans))), 4)
+\end{verbatim}
+\begin{table}[htbp]
+  \floatintro{The table shows the comparison of estimates and standard
+    errors for the slope coefficient. The reported values are the mean
+    values over the 100 samples.}
+  \centering
+  \begin{tabular}{lrr}
+    \hline
+    & Estimate($\beta_1$) & Std.Error($\beta_1$) \\ 
+    \hline
+    OLS & 1.9999 & 0.0043 \\ 
+    RE & 1.9998 & 0.0026 \\ 
+    FE & 1.9995 & 0.0036 \\ 
+    \hline
+  \end{tabular}
+  \caption{Comparison of estimates from OLS, RE and FE (with
+    $Corr(X_{it}, \alpha_i)=0$)}
+  \label{tab:q2}
+\end{table}
+Table \ref{tab:q2} shows a comparison of the estimates and standard
+errors for the slope coefficients from the three models. The values
+reported are the average over the 100 samples. OLS gives consistent
+estimates of the slope coefficient but does not give the correct
+standard error. Given the setup of the model, one would expect the
+random effects model to give the efficient estimates for the standard
+error. This is evident from the results. 
+\section*{Question 3}
+Write down a fixed effect model with one regressor
+\begin{equation}
+  \label{eq:3}
+  y_{it} = \beta_0 + \beta_1 X_{it} + \nu_{it}
+\end{equation}
+with
+\begin{equation}
+  \label{eq:4}
+  \nu_{it} = \alpha_i + \eta_t + \varepsilon_{it}
+\end{equation}
+with mean zero distributions chosen for each of these random variables
+but with $Corr(X_{it}, \alpha_i)\textgreater0$. \\
+Use the monte carlo to show that OLS is not consistent. Estimate the
+model with fixed effects and show OLS with fixed effects is
+consistent. Derive the correct formula for the standard errors,
+estimate them, and show that they indeed match what the monte carlos
+generate. \\\myrule\\
+I draw random samples of $n=100$, $N=100$ and $t=20$ with correlation
+between $X_{it}$ and $\alpha_i$ to be positive. (Here I set,
+$r=0.1$)\footnote{Lower values of $r$ will generate higher dependence
+  on $\alpha_i$ for $X$'s and thus, will be correlated.} and use the
+functions from above to get the results.
+\begin{verbatim}
+# ------------------- Monte Carlo Q3
+# Drawing random normal variables
+dat2 <- draw(n=100, N=100, t=20, r=0.1) # Notice r=0.1 in this case
+# Constructing the datasets for regressions
+dat2 <- lapply(dat2, function(x) design(x, b0=1, b1=2))
+# Running OLS, RE and FE regressions
+reg2 <- lapply(dat2, simulateReg)
+# Generating output
+result2 <- genOutput(reg2)
+# Storing the mean of the slope and standard errors
+tab2 <- round(data.frame(do.call(rbind, lapply(result2, colMeans))), 4)
+\end{verbatim}
+
+\begin{table}[ht]
+  \floatintro{The table shows the comparison of estimates and standard
+    errors for the slope coefficient. The reported values are the
+    average of 100 samples.}
+  \centering
+  \begin{tabular}{lrr}
+    \hline
+    & Estimate($\beta_1$) & Std.Error($\beta_1$) \\ 
+    \hline
+    OLS & 2.5619 & 0.0255 \\ 
+    RE & 2.4335 & 0.0219 \\ 
+    FE & 1.9947 & 0.0361 \\ 
+    \hline
+  \end{tabular}
+  \caption{Comparison of estimates from OLS, RE and FE (with
+    $Corr(X_{it}, \alpha_i)\textgreater0$)}
+  \label{tab:q3}
+\end{table}
+Table \ref{tab:q3} shows the average values of the estimates from 100
+samples. It is evident in this case, both OLS and RE gives
+inconsistent estimates for the slope coefficient. The FE model gives
+a consistent estimate for $\beta_1$. It is interesting to see that not
+only the estimators for OLS and RE are inconsistent, their standard errors are lower as
+well, which implies that it will be easier for us to reject the null $\beta_1=0$
+in favor of the estimated values.
+\section*{Question 4}
+Show that the asymptotic covariance between the 2SLS estimator and the
+difference between the 2SLS and the OLS estimator is zero if the 2SLS
+estimator is efficient. \\\myrule\\
+
+Using Hayashi's notation where $Z$ is the vector of endogenous
+variables and $X$ is the vector of instruments, 2SLS is efficient if
+$E[\epsilon_i^2x_ix_i']=E[\epsilon_i^2]E[x_ix_i']$.
+\begin{equation*}
+  \begin{aligned}
+    Cov(\hat \delta_{2SLS},(\hat \delta_{2SLS}-\hat
+    \delta_{OLS}))=E[(\hat \delta_{2SLS})*(\hat \delta_{2SLS}-\hat
+    \delta_{OLS})]-E[\hat \delta_{2SLS}]E[\hat \delta_{2SLS}-\hat \delta_{OLS}]    
+  \end{aligned}
+\end{equation*}
+
+The second term can be simplified as:
+\begin{equation*}
+  \begin{aligned}
+    E[\hat \delta_{2SLS}]E[\hat \delta_{2SLS}- \hat \delta_{OLS}]
+    &=E[\delta]E[\delta-\delta-(Z'Z)^{-1}Z'\epsilon] \\
+    & =-\delta E[(Z'Z)^{-1}Z'\epsilon]
+  \end{aligned}
+\end{equation*}
+The first term can be simplified as:
+\begin{equation*}
+  \begin{aligned}
+    E[(\hat \delta_{2SLS})*(\hat \delta_{2SLS}-\hat
+    \delta_{OLS})]&=E[\{(Z'P_xZ)^{-1}Z'P_xY\}*\{
+    (Z'P_xZ)^{-1}Z'P_xY-(Z'Z)^{-1}Z'Y\}]\\
+    &=E[\{(Z'P_xZ)^{-1}Z'P_x(Z \delta +\epsilon)\}*( (Z'P_xZ)^{-1}Z'P_x(Z
+    \delta+\epsilon)-(Z'Z)^{-1}Z'(Z \delta+\epsilon))]\\
+    &=E[\{(Z'P_xZ)^{-1}Z'P_x(Z \delta+\epsilon)\}*\{
+    (Z'P_xZ)^{-1}Z'P_x-(Z'Z)^{-1}Z'\}(Z \delta+\epsilon))]\\
+    &=E[\{\delta+(Z'P_xZ)^{-1}Z'P_x(\epsilon)\}*\{
+    (\delta+(Z'P_xZ)^{-1}Z'P_x(\epsilon)-\delta-(Z'Z)^{-1}Z'(\epsilon)\}]\\
+    &=E[\{\delta+(Z'P_xZ)^{-1}Z'P_x\epsilon\}*\{
+    (Z'P_xZ)^{-1}Z'P_x\epsilon-(Z'Z)^{-1}Z'\epsilon\}]\\
+    &=-\delta E[(Z'Z)^{-1}Z'\epsilon]
+  \end{aligned}
+\end{equation*}
+where the last equality follows from the fact that $P_x\epsilon=0$
+Substituting in the expressions we get:
+\begin{equation*}
+  \begin{aligned}
+    Cov(\hat \delta_{2SLS},(\hat \delta_{2SLS}-\hat
+    \delta_{OLS}))&=-\delta E[(Z'Z)^{-1}Z'\epsilon]+\delta
+    E[(Z'Z)^{-1}Z'\epsilon]\\
+    &=0
+  \end{aligned}
+\end{equation*}
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
