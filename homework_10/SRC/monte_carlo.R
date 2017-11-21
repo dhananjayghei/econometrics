@@ -24,3 +24,12 @@ result2 <- genOutput(reg2)
 # Storing the mean of the slope and standard errors
 tab2 <- round(data.frame(do.call(rbind, lapply(result2, colMeans))), 4)
 
+
+# Generating correct SE
+correctSE <- lapply(reg, function(x){
+    k <- resid(x[[1]])
+    X <- cbind(rep(1, length(k)), x[[1]]$model$x.cor)
+    correctSE <-  sqrt((drop(t(k)%*%k) * ginv(t(X)%*%X))[2,2]/1898)
+    return(correctSE)
+})
+mean(do.call(rbind, correctSE))

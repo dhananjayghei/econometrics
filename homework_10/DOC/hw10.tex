@@ -1,6 +1,6 @@
 \documentclass{article}
 \usepackage{float} \usepackage{enumitem}
-\usepackage{graphicx}
+\usepackage{graphicx} \usepackage{hyperref}
 \usepackage{amsmath, amsthm}
 \title{Homework 10: Econometrics\\
   ECON8206}
@@ -25,9 +25,12 @@
 
 \begin{document}
 \maketitle
-% \section*{Question 1}
-% \textit{Work on your projects. Final is Wednesday December 6 and
-% presentations are Monday December 11 and Wednesday December 13.}
+\section*{Question 1}
+\textit{Work on your projects. Final is Wednesday December 6 and
+presentations are Monday December 11 and Wednesday December 13.}
+
+\section*{Monte-carlo}
+NB: The source code is available on \href{https://www.github.com/dhananjayghei/econometrics/}{Github}\\
 For \textit{Question 2 and 3}, I write a general setup that does the
 work for both the cases. The setup of the model is:
 $\beta_0=1$, $\beta_1=2$, $X \sim N(4, 9)$, $\varepsilon \sim N(0, 1)$,
@@ -184,7 +187,32 @@ reported are the average over the 100 samples. OLS gives consistent
 estimates of the slope coefficient but does not give the correct
 standard error. Given the setup of the model, one would expect the
 random effects model to give the efficient estimates for the standard
-error. This is evident from the results. 
+error. This is evident from the results.
+
+The correct standard errors in this case will depend on the $\Omega$
+matrix. Note that:
+\begin{equation*}
+  \begin{aligned}
+    Var(\hat \beta|X)&=Var(\hat \beta -\beta|X)\\
+    &=(X'X)^{-1}X')var(\epsilon|X)((X'X)^{-1}X')'\\
+    &=(X'X)^{-1}X')\Omega((X'X)^{-1}X')'
+  \end{aligned}
+\end{equation*}
+We can then use the sample analogue of $\Omega$
+(say, $\hat
+\Omega$) since we know the distribution the error terms are coming
+from.  Note, in this case the $\hat
+\Omega$ matrix will be a block diagonal matrix, with the off-diagonal
+elements of each block having mean
+$E(cov(\nu_{it},\nu_{is}))=\sigma^2_{\alpha}$,
+but every element $(it,jt)$
+having mean $E[\nu_{it},\nu_{jt}]=\sigma^2_{\eta}$.
+The diagonal elements will have mean
+$\sigma^2_{\epsilon}+\sigma^2_{\alpha}+\sigma^2_{\eta}$.
+Meanwhile, the off-diagonal blocks will not be empty but instead
+will each look like a $t
+\times t$ diagonal matrix, with diagonal elements $\sigma^2_{\nu}$.
+ 
 \section*{Question 3}
 Write down a fixed effect model with one regressor
 \begin{equation}
@@ -247,57 +275,62 @@ a consistent estimate for $\beta_1$. It is interesting to see that not
 only the estimators for OLS and RE are inconsistent, their standard errors are lower as
 well, which implies that it will be easier for us to reject the null $\beta_1=0$
 in favor of the estimated values.
+Note that the FE model is equivalent to the LSDV model and hence the
+correct SE in this case can be derived using the formula:
+\begin{equation}
+  \label{eq:5}
+  var(\hat \beta_1|X) = \sqrt{\frac{v'v}{nt-n-k} (X'X)^{-1}_{2,2}}
+\end{equation}
+where, $v$ is the residual estimated from the least square dummy
+variable regression. Since this is equivalent to the FE model that I
+ran earlier, the SEs match with the estimation. The code for
+estimating the SEs is given below:
+\begin{verbatim}
+correctSE <- lapply(reg, function(x){
+    k <- resid(x[[1]])
+    X <- cbind(rep(1, length(k)), x[[1]]$model$x.cor)
+    correctSE <-  sqrt((drop(t(k)%*%k) * ginv(t(X)%*%X))[2,2]/1898)
+    return(correctSE)
+})
+mean(do.call(rbind, correctSE))
+\end{verbatim}
 \section*{Question 4}
 Show that the asymptotic covariance between the 2SLS estimator and the
 difference between the 2SLS and the OLS estimator is zero if the 2SLS
 estimator is efficient. \\\myrule\\
 
-Using Hayashi's notation where $Z$ is the vector of endogenous
-variables and $X$ is the vector of instruments, 2SLS is efficient if
-$E[\epsilon_i^2x_ix_i']=E[\epsilon_i^2]E[x_ix_i']$.
-\begin{equation*}
-  \begin{aligned}
-    Cov(\hat \delta_{2SLS},(\hat \delta_{2SLS}-\hat
-    \delta_{OLS}))=E[(\hat \delta_{2SLS})*(\hat \delta_{2SLS}-\hat
-    \delta_{OLS})]-E[\hat \delta_{2SLS}]E[\hat \delta_{2SLS}-\hat \delta_{OLS}]    
-  \end{aligned}
-\end{equation*}
+We want to show: $Acov(\hat \delta_{2SLS},(\hat \delta_{2SLS}-\hat
+    \delta_{OLS}))=0$\\
+Suppose \textit{not}. That is, $Acov(\hat \delta_{2SLS},(\hat \delta_{2SLS}-\hat
+    \delta_{OLS}))\neq 0$. Define, $q := \hat
+    \delta_{2SLS}-\hat\delta_{OLS}$ and note that plim($q$)=0. Define
+    a new estimator $\tilde{\delta} = \delta_{2SLS}+rBq$ where r is a
+    scalar and B is a conformable ($k \times k$) matrix.\\
 
-The second term can be simplified as:
+Then, the new estimator is consistent and asymptotically normal since
+$\hat\delta_{2SLS}$ is CAN and $q$ is asymptotically normal. Thus,
+$\sqrt{n} (\tilde{\delta} - \delta) \rightarrow N(0,
+Avar(\tilde{\delta}))$
+with $Avar(\tilde{\delta}) = Avar(\hat\delta_{2SLS}) + r^2 B Avar(q)
+B' + rBC + C'B'r$ where $C := Acov(\hat\delta_{2SLS},
+\hat\delta_{2SLS}-\hat\delta_{OLS})$\\
+
+Consider the difference between the asymptotic variance of
+$\tilde{\delta}$ and $\hat\delta_{2SLS}$
 \begin{equation*}
   \begin{aligned}
-    E[\hat \delta_{2SLS}]E[\hat \delta_{2SLS}- \hat \delta_{OLS}]
-    &=E[\delta]E[\delta-\delta-(Z'Z)^{-1}Z'\epsilon] \\
-    & =-\delta E[(Z'Z)^{-1}Z'\epsilon]
-  \end{aligned}
+    F(r) &= Avar(\tilde{\delta}) - Avar(\hat\delta_{2SLS})\\
+    &=r^2B Avar(q)B' + rBC + C'B'r
+    \end{aligned}
 \end{equation*}
-The first term can be simplified as:
-\begin{equation*}
-  \begin{aligned}
-    E[(\hat \delta_{2SLS})*(\hat \delta_{2SLS}-\hat
-    \delta_{OLS})]&=E[\{(Z'P_xZ)^{-1}Z'P_xY\}*\{
-    (Z'P_xZ)^{-1}Z'P_xY-(Z'Z)^{-1}Z'Y\}]\\
-    &=E[\{(Z'P_xZ)^{-1}Z'P_x(Z \delta +\epsilon)\}*( (Z'P_xZ)^{-1}Z'P_x(Z
-    \delta+\epsilon)-(Z'Z)^{-1}Z'(Z \delta+\epsilon))]\\
-    &=E[\{(Z'P_xZ)^{-1}Z'P_x(Z \delta+\epsilon)\}*\{
-    (Z'P_xZ)^{-1}Z'P_x-(Z'Z)^{-1}Z'\}(Z \delta+\epsilon))]\\
-    &=E[\{\delta+(Z'P_xZ)^{-1}Z'P_x(\epsilon)\}*\{
-    (\delta+(Z'P_xZ)^{-1}Z'P_x(\epsilon)-\delta-(Z'Z)^{-1}Z'(\epsilon)\}]\\
-    &=E[\{\delta+(Z'P_xZ)^{-1}Z'P_x\epsilon\}*\{
-    (Z'P_xZ)^{-1}Z'P_x\epsilon-(Z'Z)^{-1}Z'\epsilon\}]\\
-    &=-\delta E[(Z'Z)^{-1}Z'\epsilon]
-  \end{aligned}
-\end{equation*}
-where the last equality follows from the fact that $P_x\epsilon=0$
-Substituting in the expressions we get:
-\begin{equation*}
-  \begin{aligned}
-    Cov(\hat \delta_{2SLS},(\hat \delta_{2SLS}-\hat
-    \delta_{OLS}))&=-\delta E[(Z'Z)^{-1}Z'\epsilon]+\delta
-    E[(Z'Z)^{-1}Z'\epsilon]\\
-    &=0
-  \end{aligned}
-\end{equation*}
+Taking the derivative w.r.t $r$, we get $F'(r) = 2rBAvar(q)B'+BC+C'B'$
+Choose $B = -C'$. Since, C is symmetric, it leads to $F'(r) = -2C'C +
+2rC'Avar(q)C$. Now note that, $F'(0) = -2C'C \textless 0$ which means
+that for some $r$, $F(r)\textless 0$. That is, $Avar(\tilde{\delta})
+\textless Avar(\hat\delta_{2SLS}).$ \\
+This is a contradiction as 2SLS is the efficient estimator. Thus,
+$Acov(\hat \delta_{2SLS}, \hat\delta_{2SLS}-\hat\delta_{OLS}) = 0$
+\qed
 \end{document}
 
 %%% Local Variables:
